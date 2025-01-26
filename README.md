@@ -1,0 +1,49 @@
+Linux kernel DANGER
+============
+
+There are several guides for kernel developers and users. These guides can
+be rendered in a number of formats, like HTML and PDF. Please read
+Documentation/admin-guide/README.rst first.
+
+In order to build the documentation, use ``make htmldocs`` or
+``make pdfdocs``.  The formatted documentation can also be read online at:
+
+    https://www.kernel.org/doc/html/latest/
+
+There are various text files in the Documentation/ subdirectory,
+several of them using the Restructured Text markup notation.
+
+Please read the Documentation/process/changes.rst file, as it contains the
+requirements for building and running the kernel, and information about
+the problems which may result by upgrading your kernel.
+
+# Build & Run on Ubuntu 24.04
+
+```
+apt update
+apt install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev bc dwarves git
+cp /boot/config-$(uname -r) .config
+make menuconfig
+```
+
+Then, disable ```CONFIG_SYSTEM_TRUSTED_KEYS``` and ```BTF```
+
+```
+-> Cryptographic API (CRYPTO [=y])
+    -> Certificates for signature checking
+        -> Provide system-wide ring of trusted keys (SYSTEM_TRUSTED_KEYRING)
+            -> Additional X.509 keys for default system keyring (SYSTEM_TRUSTED_KEYS [=])
+
+-> Kernel hacking
+    -> Compile-time checks and compiler options
+        -> Generate BTF typeinfo (DEBUG_INFO_BTF [=n])
+```
+
+Then you can 
+
+```
+make -j24
+make modules_install
+make install
+update-grub
+```
