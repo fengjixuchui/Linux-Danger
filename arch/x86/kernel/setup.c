@@ -1326,7 +1326,7 @@ void __init setup_arch(char **cmdline_p)
 		".att_syntax;"
 		:
 		:
-		: "eax"
+		: "rax"
 	);
 	pr_crit("Bad Time to Hack CR0, %s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__);
 }
