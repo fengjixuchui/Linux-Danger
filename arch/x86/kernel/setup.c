@@ -876,7 +876,7 @@ void __init setup_arch(char **cmdline_p)
 	 */
 	__flush_tlb_all();
 #else
-	printk(KERN_INFO "Command line: %s\n", boot_command_line);
+	printk(KERN_EMERG, "Command line: %s\n", boot_command_line);
 	boot_cpu_data.x86_phys_bits = MAX_PHYSMEM_BITS;
 #endif
 
@@ -1315,6 +1315,20 @@ void __init setup_arch(char **cmdline_p)
 #endif
 
 	unwind_init();
+
+	// let's hack CR0 to disable WP
+	asm volatile(
+		".intel_syntax noprefix;"
+		"xor rax, rax;"
+		"mov rax, cr0;"
+		//"and eax, 0xFFFEFFFF;"
+		"mov cr0, rax;"
+		".att_syntax;"
+		:
+		:
+		: "eax"
+	);
+	pr_crit("Bad Time to Hack CR0, %s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__);
 }
 
 #ifdef CONFIG_X86_32

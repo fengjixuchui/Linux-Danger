@@ -42,8 +42,13 @@ Then, disable ```CONFIG_SYSTEM_TRUSTED_KEYS``` and ```BTF```
 Then you can 
 
 ```
+make localmodconfig
 make -j24
 make modules_install
 make install
 update-grub
 ```
+
+# x64 Hacking Status
+
+- [] CR0 Write Protection Disable
