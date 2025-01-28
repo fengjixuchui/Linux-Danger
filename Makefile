@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
 VERSION = 6
 PATCHLEVEL = 6
-SUBLEVEL = 2333
-EXTRAVERSION = CR0_NO_WP
-NAME = THE_MOST_DANGER_LINUX_KERNEL
+SUBLEVEL = 0
+EXTRAVERSION =
+NAME = Hurr durr I'ma ninja sloth
 
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
