@@ -212,10 +212,10 @@
 #define __KERNEL32_CS			(GDT_ENTRY_KERNEL32_CS*8)
 #define __KERNEL_CS			(GDT_ENTRY_KERNEL_CS*8)
 #define __KERNEL_DS			(GDT_ENTRY_KERNEL_DS*8)
-#define __USER32_CS			(GDT_ENTRY_DEFAULT_USER32_CS*8 + 3)
-#define __USER_DS			(GDT_ENTRY_DEFAULT_USER_DS*8 + 3)
-#define __USER_CS			(GDT_ENTRY_DEFAULT_USER_CS*8 + 3)
-#define __CPUNODE_SEG			(GDT_ENTRY_CPUNODE*8 + 3)
+#define __USER32_CS			(GDT_ENTRY_DEFAULT_USER32_CS*8 + 0) // Ring0 on last 3 bits
+#define __USER_DS			(GDT_ENTRY_DEFAULT_USER_DS*8 + 0) // Ring0 on last 3 bits
+#define __USER_CS			(GDT_ENTRY_DEFAULT_USER_CS*8 + 0) // Ring0 on last 3 bits
+#define __CPUNODE_SEG			(GDT_ENTRY_CPUNODE*8 + 0) // Ring0 on last 3 bits
 
 #endif
 

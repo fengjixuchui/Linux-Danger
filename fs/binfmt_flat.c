@@ -852,6 +852,8 @@ err:
 
 static int load_flat_binary(struct linux_binprm *bprm)
 {
+	pr_alert("!!! %s, %s !!!n", __func__, __FILE__);
+	
 	struct lib_info libinfo;
 	struct pt_regs *regs = current_pt_regs();
 	unsigned long stack_len = 0;

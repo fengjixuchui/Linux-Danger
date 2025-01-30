@@ -391,6 +391,7 @@ void __init pgtable_cache_init(void)
 
 static inline pgd_t *_pgd_alloc(void)
 {
+	pr_alert("!!! %s, %d !!!\n", __func__, __LINE__);
 	/*
 	 * If no SHARED_KERNEL_PMD, PAE kernel is running as a Xen domain.
 	 * We allocate one page for pgd.

@@ -507,6 +507,12 @@ start_thread_common(struct pt_regs *regs, unsigned long new_ip,
 		    unsigned long new_sp,
 		    unsigned int _cs, unsigned int _ss, unsigned int _ds)
 {
+	pr_alert("!!! start_thread_common, _cs: 0x%x, _ss: 0x%x, _ds: 0x%x !!!\n", _cs, _ss, _ds);
+	pr_alert("!!! start_thread_common, new_ip: %lx, new_sp: %lx !!!\n", new_ip, new_sp);
+
+	// hold for 1s
+	msleep(1000);
+	 
 	WARN_ON_ONCE(regs != current_pt_regs());
 
 	if (static_cpu_has(X86_BUG_NULL_SEG)) {
