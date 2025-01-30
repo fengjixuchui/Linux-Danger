@@ -52,3 +52,5 @@ update-grub
 # x64 Hacking Status
 
 - [] CR0 Write Protection Disable
+- [x] Hack the user GDT to Ring 0
+- [x] Disabled PTI
