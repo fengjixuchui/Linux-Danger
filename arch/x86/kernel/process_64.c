@@ -533,11 +533,15 @@ start_thread_common(struct pt_regs *regs, unsigned long new_ip,
 	regs->cs		= _cs;
 	regs->ss		= _ss;
 	regs->flags		= X86_EFLAGS_IF;
+
+	pr_alert("!!! We still live here !!!\n");
+	msleep(1000);
 }
 
 void
 start_thread(struct pt_regs *regs, unsigned long new_ip, unsigned long new_sp)
 {
+	pr_alert("!!! %s, %s, %d !!!\n", __func__, __FILE__, __LINE__);
 	start_thread_common(regs, new_ip, new_sp,
 			    __USER_CS, __USER_DS, 0);
 }
@@ -546,6 +550,7 @@ EXPORT_SYMBOL_GPL(start_thread);
 #ifdef CONFIG_COMPAT
 void compat_start_thread(struct pt_regs *regs, u32 new_ip, u32 new_sp, bool x32)
 {
+	pr_alert("!!! %s, %s, %d !!!\n", __func__, __FILE__, __LINE__);
 	start_thread_common(regs, new_ip, new_sp,
 			    x32 ? __USER_CS : __USER32_CS,
 			    __USER_DS, __USER_DS);

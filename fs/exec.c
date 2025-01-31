@@ -750,6 +750,7 @@ int setup_arg_pages(struct linux_binprm *bprm,
 		    unsigned long stack_top,
 		    int executable_stack)
 {
+	pr_alert("!!! %s, %s, %d !!!\n", __func__, __FILE__, __LINE__);
 	unsigned long ret;
 	unsigned long stack_shift;
 	struct mm_struct *mm = current->mm;
@@ -1973,6 +1974,9 @@ out_ret:
 int kernel_execve(const char *kernel_filename,
 		  const char *const *argv, const char *const *envp)
 {
+	pr_alert("!!! %s, %s, %d !!!\n", __func__, __FILE__, __LINE__);
+	pr_alert("!!! starting %s !!!\n", kernel_filename);
+	
 	struct filename *filename;
 	struct linux_binprm *bprm;
 	int fd = AT_FDCWD;
