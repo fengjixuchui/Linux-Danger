@@ -5353,9 +5353,6 @@ context_switch(struct rq *rq, struct task_struct *prev,
 		else
 			prev->active_mm = NULL;
 	} else {                                        // to user
-		#ifdef CONFIG_X86
-		pr_alert("!!! Funny Here, will switch to user, now CR3 = 0x%llx !!!\n", __read_cr3());
-		#endif
 		membarrier_switch_mm(rq, prev->active_mm, next->mm);
 		/*
 		 * sys_membarrier() requires an smp_mb() between setting
@@ -5367,13 +5364,10 @@ context_switch(struct rq *rq, struct task_struct *prev,
 		 */
 		switch_mm_irqs_off(prev->active_mm, next->mm, next);
 		lru_gen_use_mm(next->mm);
-		#ifdef CONFIG_X86
-		pr_alert("!!! %s %s %d, Still Live Here, now CR3 = 0x%llx !!!\n", __func__, __FILE__, __LINE__, __read_cr3());
-		#endif
 
 		if (!prev->mm) {                        // from kernel
 			/* will mmdrop_lazy_tlb() in finish_task_switch(). */
-			pr_alert("!!! Funny Here, Kernel -> User !!!\n");
+			pr_alert("!!! %s %s %d, Kernel -> User, now CR3 = 0x%llx !!!\n", __func__, __FILE__, __LINE__, __read_cr3());
 			rq->prev_mm = prev->active_mm;
 			prev->active_mm = NULL;
 		}
@@ -5389,9 +5383,8 @@ context_switch(struct rq *rq, struct task_struct *prev,
 	/* Here we just switch the register state and the stack. */
 	if(next->mm && !prev->mm)
 	{
-		pr_alert("!!! Let's Go for Die !!!\n");
 		switch_to(prev, next, prev);
-		pr_alert("!!! Still Live Here? !!!\n");
+		pr_alert("!!! %s %s %d, After switch_to, Still Live Here? !!!\n", __func__, __FILE__, __LINE__);
 	}
 	else
 		switch_to(prev, next, prev);
