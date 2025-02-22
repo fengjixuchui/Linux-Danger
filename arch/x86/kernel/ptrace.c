@@ -167,7 +167,9 @@ const char *regs_query_register_name(unsigned int offset)
  */
 static inline bool invalid_selector(u16 value)
 {
-	return unlikely(value != 0 && (value & SEGMENT_RPL_MASK) != USER_RPL);
+	//return unlikely(value != 0 && (value & SEGMENT_RPL_MASK) != USER_RPL);
+	// assume all selector is valid!
+	return false;
 }
 
 #ifdef CONFIG_X86_32

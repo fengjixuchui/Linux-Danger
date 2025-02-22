@@ -26,27 +26,6 @@
 #define __BOOT_DS		(GDT_ENTRY_BOOT_DS*8)
 #define __BOOT_TSS		(GDT_ENTRY_BOOT_TSS*8)
 
-/*
- * Bottom two bits of selector give the ring
- * privilege level
- */
-#define SEGMENT_RPL_MASK	0
-
-/*
- * When running on Xen PV, the actual privilege level of the kernel is 1,
- * not 0. Testing the Requested Privilege Level in a segment selector to
- * determine whether the context is user mode or kernel mode with
- * SEGMENT_RPL_MASK is wrong because the PV kernel's privilege level
- * matches the 0x3 mask.
- *
- * Testing with USER_SEGMENT_RPL_MASK is valid for both native and Xen PV
- * kernels because privilege level 2 is never used.
- */
-#define USER_SEGMENT_RPL_MASK	0
-
-/* User mode is privilege level 3: */
-#define USER_RPL		0
-
 /* Bit 2 is Table Indicator (TI): selects between LDT or GDT */
 #define SEGMENT_TI_MASK		0x4
 /* LDT segment has TI set ... */

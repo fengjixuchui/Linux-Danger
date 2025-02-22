@@ -68,7 +68,7 @@
 	ALTERNATIVE "jmp .Lend_\@", "", X86_FEATURE_PTI
 	.if \no_user_check == 0
 	/* coming from usermode? */
-	testl	$USER_SEGMENT_RPL_MASK, PT_CS(%esp)
+	testl	$__USER_CS, PT_CS(%esp)
 	jz	.Lend_\@
 	.endif
 	/* On user-cr3? */
@@ -114,7 +114,7 @@
 	testl	$X86_EFLAGS_VM, 5*4(%esp)
 	jnz	.Lfrom_usermode_no_fixup_\@
 #endif
-	testl	$USER_SEGMENT_RPL_MASK, 4*4(%esp)
+	testl	$__USER_CS, 4*4(%esp)
 	jnz	.Lfrom_usermode_no_fixup_\@
 
 	orl	$CS_FROM_KERNEL, 4*4(%esp)
@@ -317,8 +317,8 @@
 	 */
 	movb	PT_OLDSS(%esp), %ah
 	movb	PT_CS(%esp), %al
-	andl	$(X86_EFLAGS_VM | (SEGMENT_TI_MASK << 8) | SEGMENT_RPL_MASK), %eax
-	cmpl	$((SEGMENT_LDT << 8) | USER_RPL), %eax
+	andl	$(X86_EFLAGS_VM | (SEGMENT_TI_MASK << 8)), %eax
+	cmpl	$(SEGMENT_LDT << 8), %eax
 	jne	.Lend_\@	# returning to user-space with LDT SS
 
 	/*
@@ -393,17 +393,9 @@
 	movl	TSS_entry2task_stack(%edi), %edi
 
 	/* Special case - entry from kernel mode via entry stack */
-#ifdef CONFIG_VM86
-	movl	PT_EFLAGS(%esp), %ecx		# mix EFLAGS and CS
-	movb	PT_CS(%esp), %cl
-	andl	$(X86_EFLAGS_VM | SEGMENT_RPL_MASK), %ecx
-#else
 	movl	PT_CS(%esp), %ecx
-	andl	$SEGMENT_RPL_MASK, %ecx
-#endif
-	cmpl	$USER_RPL, %ecx
-	jb	.Lentry_from_kernel_\@
-
+	cmpl	$__USER_CS, %ecx
+	jne	.Lentry_from_kernel_\@
 	/* Bytes to copy */
 	movl	$PTREGS_SIZE, %ecx
 
@@ -1045,19 +1037,9 @@ SYM_CODE_START_LOCAL_NOALIGN(handle_exception)
 	CALL_NOSPEC edi
 
 handle_exception_return:
-#ifdef CONFIG_VM86
-	movl	PT_EFLAGS(%esp), %eax		# mix EFLAGS and CS
-	movb	PT_CS(%esp), %al
-	andl	$(X86_EFLAGS_VM | SEGMENT_RPL_MASK), %eax
-#else
-	/*
-	 * We can be coming here from child spawned by kernel_thread().
-	 */
 	movl	PT_CS(%esp), %eax
-	andl	$SEGMENT_RPL_MASK, %eax
-#endif
-	cmpl	$USER_RPL, %eax			# returning to v8086 or userspace ?
-	jnb	ret_to_user
+	cmpl	$__USER_CS, %eax			# returning to v8086 or userspace ?
+	je	ret_to_user
 
 	PARANOID_EXIT_TO_KERNEL_MODE
 	BUG_IF_WRONG_CR3

@@ -652,7 +652,7 @@ static bool get_desc(struct desc_struct *out, unsigned short sel)
 	 * contain the index, it can be regarded as multiplied by 8 already.
 	 * All that remains is to clear bits [2:0].
 	 */
-	desc_base = sel & ~(SEGMENT_RPL_MASK | SEGMENT_TI_MASK);
+	desc_base = sel & ~(3 | SEGMENT_TI_MASK);
 
 	if (desc_base > gdt_desc.size)
 		return false;
