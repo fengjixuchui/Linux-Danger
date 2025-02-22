@@ -507,10 +507,10 @@ start_thread_common(struct pt_regs *regs, unsigned long new_ip,
 		    unsigned long new_sp,
 		    unsigned int _cs, unsigned int _ss, unsigned int _ds)
 {
-	pr_alert("!!! start_thread_common, _cs: 0x%x, _ss: 0x%x, _ds: 0x%x !!!\n", _cs, _ss, _ds);
+	pr_alert("!!! start_thread_common, target _cs: 0x%x, _ss: 0x%x, _ds: 0x%x !!!\n", _cs, _ss, _ds);
 	pr_alert("!!! start_thread_common, new_ip: %lx, new_sp: %lx !!!\n", new_ip, new_sp);
 
-	// hold for 1s
+	// hold for 1s, wait console display log
 	msleep(1000);
 	 
 	WARN_ON_ONCE(regs != current_pt_regs());
@@ -533,9 +533,6 @@ start_thread_common(struct pt_regs *regs, unsigned long new_ip,
 	regs->cs		= _cs;
 	regs->ss		= _ss;
 	regs->flags		= X86_EFLAGS_IF;
-
-	pr_alert("!!! We still live here !!!\n");
-	msleep(1000);
 }
 
 void
@@ -543,7 +540,7 @@ start_thread(struct pt_regs *regs, unsigned long new_ip, unsigned long new_sp)
 {
 	pr_alert("!!! %s, %s, %d !!!\n", __func__, __FILE__, __LINE__);
 	start_thread_common(regs, new_ip, new_sp,
-			    __USER_CS, __USER_DS, 0);
+			    __USER_CS, __USER_DS, __USER_DS);
 }
 EXPORT_SYMBOL_GPL(start_thread);
 
