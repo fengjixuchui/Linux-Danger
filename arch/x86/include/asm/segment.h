@@ -30,7 +30,7 @@
  * Bottom two bits of selector give the ring
  * privilege level
  */
-#define SEGMENT_RPL_MASK	0x3
+#define SEGMENT_RPL_MASK	0
 
 /*
  * When running on Xen PV, the actual privilege level of the kernel is 1,
@@ -42,10 +42,10 @@
  * Testing with USER_SEGMENT_RPL_MASK is valid for both native and Xen PV
  * kernels because privilege level 2 is never used.
  */
-#define USER_SEGMENT_RPL_MASK	0x2
+#define USER_SEGMENT_RPL_MASK	0
 
 /* User mode is privilege level 3: */
-#define USER_RPL		0x3
+#define USER_RPL		0
 
 /* Bit 2 is Table Indicator (TI): selects between LDT or GDT */
 #define SEGMENT_TI_MASK		0x4
