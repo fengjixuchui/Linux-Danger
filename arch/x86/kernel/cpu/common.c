@@ -365,8 +365,9 @@ static inline void squash_the_stupid_serial_number(struct cpuinfo_x86 *c)
 
 static __always_inline void setup_smep(struct cpuinfo_x86 *c)
 {
-	if (cpu_has(c, X86_FEATURE_SMEP))
-		cr4_set_bits(X86_CR4_SMEP);
+	// if (cpu_has(c, X86_FEATURE_SMEP))
+	// 	cr4_set_bits(X86_CR4_SMEP);
+	pr_alert("!!! %s, %s, %d !!!, hack to disable SMEP\n", __func__, __FILE__, __LINE__);
 }
 
 static __always_inline void setup_smap(struct cpuinfo_x86 *c)
@@ -376,8 +377,9 @@ static __always_inline void setup_smap(struct cpuinfo_x86 *c)
 	/* This should have been cleared long ago */
 	BUG_ON(eflags & X86_EFLAGS_AC);
 
-	if (cpu_has(c, X86_FEATURE_SMAP))
-		cr4_set_bits(X86_CR4_SMAP);
+	// if (cpu_has(c, X86_FEATURE_SMAP))
+	// 	cr4_set_bits(X86_CR4_SMAP);
+	pr_alert("!!! %s, %s, %d !!!, hack to disable SMAP\n", __func__, __FILE__, __LINE__);
 }
 
 static __always_inline void setup_umip(struct cpuinfo_x86 *c)
