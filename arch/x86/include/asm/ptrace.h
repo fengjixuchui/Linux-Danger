@@ -130,11 +130,16 @@ static inline void regs_set_return_value(struct pt_regs *regs, unsigned long rc)
  */
 static __always_inline int user_mode(struct pt_regs *regs)
 {
-#ifdef CONFIG_X86_32
-	return ((regs->cs & SEGMENT_RPL_MASK) | (regs->flags & X86_VM_MASK)) >= USER_RPL;
-#else
-	return !!(regs->cs & 3);
-#endif
+	if(regs->cs == __USER_CS)
+	{
+		pr_alert("!!! %s, %s, %d !!!, trick the code BELIEVE it is in user mode 2333\n", __func__, __FILE__, __LINE__);
+		return 1;
+	}
+	else
+	{
+		pr_alert("!!! %s, %s, %d !!!, trick the code BELIEVE it is in kernel mode 2333\n", __func__, __FILE__, __LINE__);
+		return 0;
+	}
 }
 
 static __always_inline int v8086_mode(struct pt_regs *regs)

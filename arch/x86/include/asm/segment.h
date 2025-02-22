@@ -134,8 +134,11 @@
 
 #define __KERNEL_CS			(GDT_ENTRY_KERNEL_CS*8)
 #define __KERNEL_DS			(GDT_ENTRY_KERNEL_DS*8)
-#define __USER_DS			(GDT_ENTRY_DEFAULT_USER_DS*8 + 3)
-#define __USER_CS			(GDT_ENTRY_DEFAULT_USER_CS*8 + 3)
+
+// Hack the segment selectors to Ring0!
+
+#define __USER_DS			(GDT_ENTRY_DEFAULT_USER_DS*8 + 0)
+#define __USER_CS			(GDT_ENTRY_DEFAULT_USER_CS*8 + 0)
 #define __USER32_CS			__USER_CS
 #define __ESPFIX_SS			(GDT_ENTRY_ESPFIX_SS*8)
 
@@ -160,7 +163,7 @@
 # define __KERNEL_PERCPU		0
 #endif
 
-#define __CPUNODE_SEG			(GDT_ENTRY_CPUNODE*8 + 3)
+#define __CPUNODE_SEG			(GDT_ENTRY_CPUNODE*8 + 0)
 
 #else /* 64-bit: */
 
