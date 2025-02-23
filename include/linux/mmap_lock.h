@@ -149,6 +149,7 @@ static inline void mmap_read_lock(struct mm_struct *mm)
 
 static inline int mmap_read_lock_killable(struct mm_struct *mm)
 {
+	pr_alert("!!! %s %s %d\n", __FILE__, __func__, __LINE__);
 	int ret;
 
 	__mmap_lock_trace_start_locking(mm, false);

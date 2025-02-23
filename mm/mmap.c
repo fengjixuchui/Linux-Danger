@@ -3180,6 +3180,8 @@ int vm_brk_flags(unsigned long addr, unsigned long request, unsigned long flags)
 
 	vma = vma_prev(&vmi);
 	ret = do_brk_flags(&vmi, vma, addr, len, flags);
+	if(ret)
+		pr_alert("!!! %s %s %d, do_brk_flags failed\n", __FILE__, __func__, __LINE__);
 	populate = ((mm->def_flags & VM_LOCKED) != 0);
 	mmap_write_unlock(mm);
 	userfaultfd_unmap_complete(mm, &uf);

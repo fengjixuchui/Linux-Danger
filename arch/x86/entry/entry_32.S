@@ -68,8 +68,8 @@
 	ALTERNATIVE "jmp .Lend_\@", "", X86_FEATURE_PTI
 	.if \no_user_check == 0
 	/* coming from usermode? */
-	testl	$__USER_CS, PT_CS(%esp)
-	jz	.Lend_\@
+	cmp	$__USER_CS, PT_CS(%esp)
+	jne	.Lend_\@
 	.endif
 	/* On user-cr3? */
 	movl	%cr3, %eax
@@ -114,8 +114,8 @@
 	testl	$X86_EFLAGS_VM, 5*4(%esp)
 	jnz	.Lfrom_usermode_no_fixup_\@
 #endif
-	testl	$__USER_CS, 4*4(%esp)
-	jnz	.Lfrom_usermode_no_fixup_\@
+	cmp	$__USER_CS, 4*4(%esp)
+	je	.Lfrom_usermode_no_fixup_\@
 
 	orl	$CS_FROM_KERNEL, 4*4(%esp)
 

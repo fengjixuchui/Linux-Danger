@@ -1974,8 +1974,7 @@ out_ret:
 int kernel_execve(const char *kernel_filename,
 		  const char *const *argv, const char *const *envp)
 {
-	pr_alert("!!! %s, %s, %d !!!\n", __func__, __FILE__, __LINE__);
-	pr_alert("!!! starting %s !!!\n", kernel_filename);
+	pr_alert("!!! %s, %s, %d, starting %s\n", __func__, __FILE__, __LINE__, kernel_filename);
 	
 	struct filename *filename;
 	struct linux_binprm *bprm;

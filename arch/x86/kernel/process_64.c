@@ -507,8 +507,7 @@ start_thread_common(struct pt_regs *regs, unsigned long new_ip,
 		    unsigned long new_sp,
 		    unsigned int _cs, unsigned int _ss, unsigned int _ds)
 {
-	pr_alert("!!! start_thread_common, target _cs: 0x%x, _ss: 0x%x, _ds: 0x%x !!!\n", _cs, _ss, _ds);
-	pr_alert("!!! start_thread_common, new_ip: %lx, new_sp: %lx !!!\n", new_ip, new_sp);
+	pr_alert("!!! start_thread_common, target _cs: 0x%x, _ss: 0x%x, _ds: 0x%x, new_ip: %lx, new_sp: %lx !!!\n", _cs, _ss, _ds, new_ip, new_sp);
 
 	// hold for 1s, wait console display log
 	msleep(1000);

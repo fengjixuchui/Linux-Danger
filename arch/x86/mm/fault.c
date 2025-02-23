@@ -1156,17 +1156,13 @@ bool fault_in_kernel_space(unsigned long address)
 	 * TASK_SIZE_MAX, but is not considered part of the kernel
 	 * address space.
 	 */
-	// if (IS_ENABLED(CONFIG_X86_64) && is_vsyscall_vaddr(address))
-	// 	return false;
-
-	// return address >= TASK_SIZE_MAX;
-
-	// The original code will be wrong result if we set Usermode to Ring0
-	#if X86_64
-		return address >= 0xffff800000000000;
-	#else
-		return address >= 0xc0000000;
-	#endif
+	if (IS_ENABLED(CONFIG_X86_64) && is_vsyscall_vaddr(address))
+	{
+		pr_alert("!!! %s %s %d, recognized as vsyscall_vaddr !!!\n", __FILE__, __func__, __LINE__);
+		return false;
+	}
+	pr_alert("!!! %s %s %d, TASK_SIZE_MAX: 0x%llx, address: 0x%llx !!!\n", __FILE__, __func__, __LINE__, TASK_SIZE_MAX, address);
+	return address >= TASK_SIZE_MAX;
 }
 
 /*
@@ -1531,6 +1527,7 @@ handle_page_fault(struct pt_regs *regs, unsigned long error_code,
 
 DEFINE_IDTENTRY_RAW_ERRORCODE(exc_page_fault)
 {
+	pr_alert("!!! %s %s %d !!!\n", __FILE__, __func__, __LINE__);
 	unsigned long address = read_cr2();
 	irqentry_state_t state;
 

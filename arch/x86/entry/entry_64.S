@@ -403,8 +403,8 @@ SYM_CODE_START(\asmsym)
 		 * If coming from kernel space, create a 6-word gap to allow the
 		 * int3 handler to emulate a call instruction.
 		 */
-		testb	$3, CS-ORIG_RAX(%rsp)
-		jnz	.Lfrom_usermode_no_gap_\@
+		cmp	$__USER_CS, CS-ORIG_RAX(%rsp)
+		je	.Lfrom_usermode_no_gap_\@
 		.rept	6
 		pushq	5*8(%rsp)
 		.endr
@@ -469,7 +469,7 @@ SYM_CODE_START(\asmsym)
 	 * If the entry is from userspace, switch stacks and treat it as
 	 * a normal entry.
 	 */
-	testb	$3, CS-ORIG_RAX(%rsp)
+	cmp	$__USER_DS, CS-ORIG_RAX(%rsp)
 	jnz	.Lfrom_usermode_switch_stack_\@
 
 	/* paranoid_entry returns GS information for paranoid_exit in EBX. */
@@ -524,8 +524,8 @@ SYM_CODE_START(\asmsym)
 	 * If the entry is from userspace, switch stacks and treat it as
 	 * a normal entry.
 	 */
-	testb	$3, CS-ORIG_RAX(%rsp)
-	jnz	.Lfrom_usermode_switch_stack_\@
+	cmp	$__USER_CS, CS-ORIG_RAX(%rsp)
+	je	.Lfrom_usermode_switch_stack_\@
 
 	/*
 	 * paranoid_entry returns SWAPGS flag for paranoid_exit in EBX.
@@ -621,13 +621,7 @@ __irqentry_text_end:
 SYM_CODE_START_LOCAL(common_interrupt_return)
 SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	IBRS_EXIT
-#ifdef CONFIG_DEBUG_ENTRY
-	/* Assert that pt_regs indicates user mode. */
-	testb	$3, CS(%rsp)
-	jnz	1f
-	ud2
-1:
-#endif
+
 #ifdef CONFIG_XEN_PV
 	ALTERNATIVE "", "jmp xenpv_restore_regs_and_return_to_usermode", X86_FEATURE_XENPV
 #endif
@@ -667,13 +661,6 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 
 
 SYM_INNER_LABEL(restore_regs_and_return_to_kernel, SYM_L_GLOBAL)
-#ifdef CONFIG_DEBUG_ENTRY
-	/* Assert that pt_regs indicates kernel mode. */
-	testb	$3, CS(%rsp)
-	jz	1f
-	ud2
-1:
-#endif
 	POP_REGS
 	addq	$8, %rsp	/* skip regs->orig_ax */
 	/*
@@ -1055,8 +1042,8 @@ SYM_CODE_START(error_entry)
 	PUSH_AND_CLEAR_REGS save_ret=1
 	ENCODE_FRAME_POINTER 8
 
-	testb	$3, CS+8(%rsp)
-	jz	.Lerror_kernelspace
+	cmp	$__USER_CS, CS+8(%rsp)
+	jne	.Lerror_kernelspace
 
 	/*
 	 * We entered from user mode or we're pretending to have entered
@@ -1136,8 +1123,8 @@ SYM_CODE_END(error_entry)
 SYM_CODE_START_LOCAL(error_return)
 	UNWIND_HINT_REGS
 	DEBUG_ENTRY_ASSERT_IRQS_OFF
-	testb	$3, CS(%rsp)
-	jz	restore_regs_and_return_to_kernel
+	cmp	$__USER_CS, CS(%rsp)
+	jne	restore_regs_and_return_to_kernel
 	jmp	swapgs_restore_regs_and_return_to_usermode
 SYM_CODE_END(error_return)
 
@@ -1197,8 +1184,8 @@ SYM_CODE_START(asm_exc_nmi)
 	/* Use %rdx as our temp variable throughout */
 	pushq	%rdx
 
-	testb	$3, CS-RIP+8(%rsp)
-	jz	.Lnmi_from_kernel
+	cmp	$__USER_CS, CS-RIP+8(%rsp)
+	jne	.Lnmi_from_kernel
 
 	/*
 	 * NMI from user mode.  We need to run on the thread stack, but we
