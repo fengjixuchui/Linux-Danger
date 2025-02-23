@@ -759,7 +759,8 @@ kernelmode_fixup_or_oops(struct pt_regs *regs, unsigned long error_code,
 	 */
 	if (is_prefetch(regs, error_code, address))
 		return;
-
+	
+	pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
 	page_fault_oops(regs, error_code, address);
 }
 
@@ -823,6 +824,7 @@ __bad_area_nosemaphore(struct pt_regs *regs, unsigned long error_code,
 
 	if (!(error_code & X86_PF_USER)) {
 		/* Implicit user access to kernel memory -- just oops */
+		pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
 		page_fault_oops(regs, error_code, address);
 		return;
 	}
@@ -1257,20 +1259,22 @@ void do_user_addr_fault(struct pt_regs *regs,
 	tsk = current;
 	mm = tsk->mm;
 
-	if (unlikely((error_code & (X86_PF_USER | X86_PF_INSTR)) == X86_PF_INSTR)) {
-		/*
-		 * Whoops, this is kernel mode code trying to execute from
-		 * user memory.  Unless this is AMD erratum #93, which
-		 * corrupts RIP such that it looks like a user address,
-		 * this is unrecoverable.  Don't even try to look up the
-		 * VMA or look for extable entries.
-		 */
-		if (is_errata93(regs, address))
-			return;
-
-		page_fault_oops(regs, error_code, address);
-		return;
-	}
+	// if (unlikely((error_code & (X86_PF_USER | X86_PF_INSTR)) == X86_PF_INSTR)) {
+	// 	/*
+	// 	 * Whoops, this is kernel mode code trying to execute from
+	// 	 * user memory.  Unless this is AMD erratum #93, which
+	// 	 * corrupts RIP such that it looks like a user address,
+	// 	 * this is unrecoverable.  Don't even try to look up the
+	// 	 * VMA or look for extable entries.
+	// 	 */
+	// 	if (is_errata93(regs, address))
+	// 		return;
+		
+	// 	pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
+	// 	page_fault_oops(regs, error_code, address);
+	// 	return;
+	// }
+	// Ignore this protect!!
 
 	/* kprobes don't want to hook the spurious faults: */
 	if (WARN_ON_ONCE(kprobe_page_fault(regs, X86_TRAP_PF)))
@@ -1297,6 +1301,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 		 * No extable entry here.  This was a kernel access to an
 		 * invalid pointer.  get_kernel_nofault() will not get here.
 		 */
+		pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
 		page_fault_oops(regs, error_code, address);
 		return;
 	}
