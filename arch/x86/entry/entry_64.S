@@ -469,8 +469,8 @@ SYM_CODE_START(\asmsym)
 	 * If the entry is from userspace, switch stacks and treat it as
 	 * a normal entry.
 	 */
-	cmp	$__USER_DS, CS-ORIG_RAX(%rsp)
-	jnz	.Lfrom_usermode_switch_stack_\@
+	cmp	$__USER_CS, CS-ORIG_RAX(%rsp)
+	je	.Lfrom_usermode_switch_stack_\@
 
 	/* paranoid_entry returns GS information for paranoid_exit in EBX. */
 	call	paranoid_entry
