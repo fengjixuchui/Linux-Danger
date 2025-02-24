@@ -1087,6 +1087,8 @@ int show_unhandled_signals = 1;
 static inline int
 access_error(unsigned long error_code, struct vm_area_struct *vma)
 {
+	pr_alert("!!! %s %s %d, error_code: 0x%lx\n", __FILE__, __func__, __LINE__, error_code);
+
 	/* This is only called for the current mm, so: */
 	bool foreign = false;
 
@@ -1117,7 +1119,10 @@ access_error(unsigned long error_code, struct vm_area_struct *vma)
 	 */
 	if (!arch_vma_access_permitted(vma, (error_code & X86_PF_WRITE),
 				       (error_code & X86_PF_INSTR), foreign))
+	{
+		pr_alert("!!! %s %s %d, arch_vma_access_permitted failed !!!\n", __FILE__, __func__, __LINE__);
 		return 1;
+	}
 
 	/*
 	 * Shadow stack accesses (PF_SHSTK=1) are only permitted to
@@ -1142,11 +1147,16 @@ access_error(unsigned long error_code, struct vm_area_struct *vma)
 
 	/* read, present: */
 	if (unlikely(error_code & X86_PF_PROT))
+	{
+		pr_alert("!!! %s %s %d, read, present !!!\n", __FILE__, __func__, __LINE__);
 		return 1;
+	}
 
 	/* read, not present: */
 	if (unlikely(!vma_is_accessible(vma)))
-		return 1;
+	{
+		pr_alert("!!! %s %s %d, read, not present, and not accessible !!!\n", __FILE__, __func__, __LINE__);
+	}
 
 	return 0;
 }
@@ -1294,23 +1304,25 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * SMAP and will have the USER bit set so, in all cases, SMAP
 	 * enforcement appears to be consistent with the USER bit.
 	 */
-	if (unlikely(cpu_feature_enabled(X86_FEATURE_SMAP) &&
-		     !(error_code & X86_PF_USER) &&
-		     !(regs->flags & X86_EFLAGS_AC))) {
-		/*
-		 * No extable entry here.  This was a kernel access to an
-		 * invalid pointer.  get_kernel_nofault() will not get here.
-		 */
-		pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
-		page_fault_oops(regs, error_code, address);
-		return;
-	}
+	// if (unlikely(cpu_feature_enabled(X86_FEATURE_SMAP) &&
+	// 	     !(error_code & X86_PF_USER) &&
+	// 	     !(regs->flags & X86_EFLAGS_AC))) {
+	// 	/*
+	// 	 * No extable entry here.  This was a kernel access to an
+	// 	 * invalid pointer.  get_kernel_nofault() will not get here.
+	// 	 */
+	// 	pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
+	// 	page_fault_oops(regs, error_code, address);
+	// 	return;
+	// }
+	// ignore this protect!!
 
 	/*
 	 * If we're in an interrupt, have no user context or are running
 	 * in a region with pagefaults disabled then we must not take the fault
 	 */
 	if (unlikely(faulthandler_disabled() || !mm)) {
+		pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
 		bad_area_nosemaphore(regs, error_code, address);
 		return;
 	}
@@ -1375,6 +1387,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 		goto lock_mmap;
 	}
 	fault = handle_mm_fault(vma, address, flags | FAULT_FLAG_VMA_LOCK, regs);
+	pr_alert("!!! %s %s %d, handle_mm_fault done, fault: 0x%lx !!!\n", __FILE__, __func__, __LINE__, fault);
 	if (!(fault & (VM_FAULT_RETRY | VM_FAULT_COMPLETED)))
 		vma_end_read(vma);
 
@@ -1397,6 +1410,7 @@ lock_mmap:
 retry:
 	vma = lock_mm_and_find_vma(mm, address, regs);
 	if (unlikely(!vma)) {
+		pr_alert("%s %s %d, lock_mm_and_find_vma failed !!!\n", __FILE__, __func__, __LINE__);
 		bad_area_nosemaphore(regs, error_code, address);
 		return;
 	}
@@ -1406,6 +1420,7 @@ retry:
 	 * we can handle it..
 	 */
 	if (unlikely(access_error(error_code, vma))) {
+		pr_alert("%s %s %d, access_error !!!\n", __FILE__, __func__, __LINE__);
 		bad_area_access_error(regs, error_code, address, vma);
 		return;
 	}
@@ -1424,7 +1439,7 @@ retry:
 	 * FAULT_FLAG_USER|FAULT_FLAG_KILLABLE are both set in flags.
 	 */
 	fault = handle_mm_fault(vma, address, flags, regs);
-
+	pr_alert("!!! %s %s %d, handle_mm_fault done, fault: 0x%lx !!!\n", __FILE__, __func__, __LINE__, fault);
 	if (fault_signal_pending(fault, regs)) {
 		/*
 		 * Quick path to respond to signals.  The core mm code

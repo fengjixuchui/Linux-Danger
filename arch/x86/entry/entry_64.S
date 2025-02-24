@@ -577,6 +577,7 @@ SYM_CODE_END(\asmsym)
  * this comes because for the espfix induced #DF this would do the wrong
  * thing.
  */
+// Also used for #PF !!!
 .macro idtentry_df vector asmsym cfunc
 SYM_CODE_START(\asmsym)
 	UNWIND_HINT_IRET_ENTRY offset=8

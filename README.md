@@ -1,21 +1,6 @@
-Linux kernel DANGER
-============
+# Linux kernel DANGER
 
-There are several guides for kernel developers and users. These guides can
-be rendered in a number of formats, like HTML and PDF. Please read
-Documentation/admin-guide/README.rst first.
-
-In order to build the documentation, use ``make htmldocs`` or
-``make pdfdocs``.  The formatted documentation can also be read online at:
-
-    https://www.kernel.org/doc/html/latest/
-
-There are various text files in the Documentation/ subdirectory,
-several of them using the Restructured Text markup notation.
-
-Please read the Documentation/process/changes.rst file, as it contains the
-requirements for building and running the kernel, and information about
-the problems which may result by upgrading your kernel.
+This project aims to hack the Linux kernel that make usermode code run in Ring0.
 
 # Omoshiroi Code Files
 
@@ -43,7 +28,7 @@ Sources
 
 [arch/x86/kernel/process_64.c](arch/x86/kernel/process_64.c) - Start Usermode Threads
 
-[arch/x86/kernel/entry_64.S](arch/x86/kernel/entry_64.S) - syscall/sysret
+[arch/x86/entry/entry_64.S](arch/x86/entry/entry_64.S) - idt/syscall/sysret
 
 [arch/x86/mm/fault.c](arch/x86/mm/fault.c) - Page Fault Handler
 
@@ -91,3 +76,4 @@ update-grub
 - [x] Disabled SMEP/SMAP
 - [x] Hacked User Segment Descriptors to Ring 0
 - [x] Hacked User Page Table Templates to Ring 0
+- [x] Disabled Alternatives

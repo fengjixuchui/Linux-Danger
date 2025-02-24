@@ -462,6 +462,15 @@ DEFINE_IDTENTRY_DF(exc_double_fault)
 #endif
 
 	pr_emerg("PANIC: double fault, error_code: 0x%lx\n", error_code);
+	
+	// check the asm_exc_page_fault memory
+	uint8_t *asm_exc_page_fault_buf = (uint8_t *)asm_exc_page_fault;
+	char str_buf[1024] = {0};
+	for(int i=0; i<128; i++){
+		sprintf(str_buf + i*3, "%02X ", asm_exc_page_fault_buf[i]);
+	}
+	pr_alert("asm_exc_page_fault addr: %llX, content: \n%s\n", asm_exc_page_fault, str_buf);
+
 	die("double fault", regs, error_code);
 	panic("Machine halted.");
 	instrumentation_end();

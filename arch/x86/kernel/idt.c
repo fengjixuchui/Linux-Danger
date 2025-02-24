@@ -189,6 +189,24 @@ idt_setup_from_table(gate_desc *idt, const struct idt_data *t, int size, bool sy
 	gate_desc desc;
 
 	for (; size > 0; t++, size--) {
+		if(t->vector == X86_TRAP_PF)
+		{
+			if(t->addr == asm_exc_page_fault)
+			{
+				pr_alert("!!! Setting #PF handler to asm_exc_page_fault !!!\n");
+				// check the asm_exc_page_fault memory
+				uint8_t *asm_exc_page_fault_buf = (uint8_t *)asm_exc_page_fault;
+				char str_buf[1024] = {0};
+				for(int i=0; i<128; i++){
+					sprintf(str_buf + i*3, "%02X ", asm_exc_page_fault_buf[i]);
+				}
+				pr_alert("asm_exc_page_fault addr: %llX, content: \n%s\n", asm_exc_page_fault, str_buf);
+			}
+			else
+			{
+				pr_alert("!!! Setting #PF handler to 0x%llx !!!\n", t->addr);
+			}
+		}
 		idt_init_desc(&desc, t);
 		write_idt_entry(idt, t->vector, &desc);
 		if (sys)
