@@ -394,6 +394,15 @@ SYM_CODE_START(\asmsym)
 	ASM_CLAC
 	cld
 
+	// make a debug signal to QEMU
+	push %dx
+	push %ax
+	mov $0x2333, %dx // destination port
+	mov $0xE399, %ax // data
+	out %ax, %dx
+	pop %ax
+	pop %dx
+
 	.if \has_error_code == 0
 		pushq	$-1			/* ORIG_RAX: no syscall to restart */
 	.endif
@@ -519,7 +528,7 @@ SYM_CODE_START(\asmsym)
 	ENDBR
 	ASM_CLAC
 	cld
-
+	
 	/*
 	 * If the entry is from userspace, switch stacks and treat it as
 	 * a normal entry.
@@ -577,13 +586,17 @@ SYM_CODE_END(\asmsym)
  * this comes because for the espfix induced #DF this would do the wrong
  * thing.
  */
-// Also used for #PF !!!
+
 .macro idtentry_df vector asmsym cfunc
 SYM_CODE_START(\asmsym)
 	UNWIND_HINT_IRET_ENTRY offset=8
 	ENDBR
 	ASM_CLAC
 	cld
+	// make a debug signal to QEMU
+	mov $0x2333, %dx // destination port
+	mov $0xDEAD, %ax // data
+	out %ax, %dx
 
 	/* paranoid_entry returns GS information for paranoid_exit in EBX. */
 	call	paranoid_entry
