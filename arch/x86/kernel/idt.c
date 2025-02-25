@@ -251,7 +251,8 @@ void __init idt_setup_traps(void)
  * stacks work only after cpu_init().
  */
 static const __initconst struct idt_data early_pf_idts[] = {
-	INTG(X86_TRAP_PF,		asm_exc_page_fault),
+	//INTG(X86_TRAP_PF,		asm_exc_page_fault),
+	ISTG(X86_TRAP_PF,		asm_exc_page_fault, IST_INDEX_DF), // since we run usermode in ring0, QEMU/CPU cannot recognize the cpl->dpl when exception occurs, so we need use IST_INDEX_DF to make sure stack always available
 };
 
 /**
