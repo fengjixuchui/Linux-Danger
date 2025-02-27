@@ -371,6 +371,7 @@ SYM_CODE_END(xen_error_entry)
 .endm
 
 .macro chk_revert_kernel_rsp has_error_code magicDbg
+	cli
 	.if \has_error_code == 1 // Exception
 		.if \magicDbg == 1
 			// make a debug signal to QEMU
@@ -813,6 +814,7 @@ SYM_INNER_LABEL(native_irq_return_iret, SYM_L_GLOBAL)
 	 * Double-faults due to espfix64 are handled in exc_double_fault.
 	 * Other faults here are fatal.
 	 */
+	sti
 	iretq
 
 #ifdef CONFIG_X86_ESPFIX64
