@@ -77,3 +77,4 @@ update-grub
 - [x] Hacked User Segment Descriptors to Ring 0
 - [x] Hacked User Page Table Templates to Ring 0
 - [x] Disabled Alternatives
+- [x] Adjust IST to make sure stack always available

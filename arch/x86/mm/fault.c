@@ -1387,7 +1387,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 		goto lock_mmap;
 	}
 	fault = handle_mm_fault(vma, address, flags | FAULT_FLAG_VMA_LOCK, regs);
-	pr_alert("!!! %s %s %d, handle_mm_fault done, fault: 0x%lx !!!\n", __FILE__, __func__, __LINE__, fault);
+	//pr_alert("!!! %s %s %d, handle_mm_fault done, fault: 0x%lx !!!\n", __FILE__, __func__, __LINE__, fault);
 	if (!(fault & (VM_FAULT_RETRY | VM_FAULT_COMPLETED)))
 		vma_end_read(vma);
 
@@ -1439,7 +1439,7 @@ retry:
 	 * FAULT_FLAG_USER|FAULT_FLAG_KILLABLE are both set in flags.
 	 */
 	fault = handle_mm_fault(vma, address, flags, regs);
-	pr_alert("!!! %s %s %d, handle_mm_fault done, fault: 0x%lx !!!\n", __FILE__, __func__, __LINE__, fault);
+	//pr_alert("!!! %s %s %d, handle_mm_fault done, fault: 0x%lx !!!\n", __FILE__, __func__, __LINE__, fault);
 	if (fault_signal_pending(fault, regs)) {
 		/*
 		 * Quick path to respond to signals.  The core mm code
@@ -1529,10 +1529,10 @@ handle_page_fault(struct pt_regs *regs, unsigned long error_code,
 
 	/* Was the fault on kernel-controlled part of the address space? */
 	if (unlikely(fault_in_kernel_space(address))) {
-		pr_alert("!!! %s %s %d, recognized as kernel space !!!\n", __FILE__, __func__, __LINE__);
+		//pr_alert("!!! %s %s %d, recognized as kernel space !!!\n", __FILE__, __func__, __LINE__);
 		do_kern_addr_fault(regs, error_code, address);
 	} else {
-		pr_alert("!!! %s %s %d, recognized as user space !!!\n", __FILE__, __func__, __LINE__);
+		//pr_alert("!!! %s %s %d, recognized as user space !!!\n", __FILE__, __func__, __LINE__);
 		do_user_addr_fault(regs, error_code, address);
 		/*
 		 * User address page fault handling might have reenabled

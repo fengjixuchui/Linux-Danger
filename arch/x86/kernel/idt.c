@@ -30,11 +30,11 @@
 
 /* Interrupt gate */
 #define INTG(_vector, _addr)				\
-	G(_vector, _addr, DEFAULT_STACK, GATE_INTERRUPT, DPL0, __KERNEL_CS)
+	G(_vector, _addr, IST_INDEX_DF + 1, GATE_INTERRUPT, DPL0, __KERNEL_CS)
 
 /* System interrupt gate */
 #define SYSG(_vector, _addr)				\
-	G(_vector, _addr, DEFAULT_STACK, GATE_INTERRUPT, DPL3, __KERNEL_CS)
+	G(_vector, _addr, IST_INDEX_DF + 1, GATE_INTERRUPT, DPL3, __KERNEL_CS)
 
 #ifdef CONFIG_X86_64
 /*
@@ -49,7 +49,7 @@
 
 /* Task gate */
 #define TSKG(_vector, _gdt)				\
-	G(_vector, NULL, DEFAULT_STACK, GATE_TASK, DPL0, _gdt << 3)
+	G(_vector, NULL, IST_INDEX_DF + 1, GATE_TASK, DPL0, _gdt << 3)
 
 #define IDT_TABLE_SIZE		(IDT_ENTRIES * sizeof(gate_desc))
 
@@ -251,8 +251,8 @@ void __init idt_setup_traps(void)
  * stacks work only after cpu_init().
  */
 static const __initconst struct idt_data early_pf_idts[] = {
-	//INTG(X86_TRAP_PF,		asm_exc_page_fault),
-	ISTG(X86_TRAP_PF,		asm_exc_page_fault, IST_INDEX_DF), // since we run usermode in ring0, QEMU/CPU cannot recognize the cpl->dpl when exception occurs, so we need use IST_INDEX_DF to make sure stack always available
+	INTG(X86_TRAP_PF,		asm_exc_page_fault),
+	//ISTG(X86_TRAP_PF,		asm_exc_page_fault, IST_INDEX_DF), // since we run usermode in ring0, QEMU/CPU cannot recognize the cpl->dpl when exception occurs, so we need use IST_INDEX_DF to make sure stack always available
 };
 
 /**

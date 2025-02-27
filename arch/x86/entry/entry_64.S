@@ -370,33 +370,24 @@ SYM_CODE_END(xen_error_entry)
 	jmp	error_return
 .endm
 
-/**
- * idtentry - Macro to generate entry stubs for simple IDT entries
- * @vector:		Vector number
- * @asmsym:		ASM symbol for the entry point
- * @cfunc:		C function to be called
- * @has_error_code:	Hardware pushed error code on stack
- *
- * The macro emits code to set up the kernel context for straight forward
- * and simple IDT entries. No IST stack, no paranoid entry checks.
- */
-.macro idtentry vector asmsym cfunc has_error_code:req
-SYM_CODE_START(\asmsym)
-	.if \vector == X86_TRAP_PF
-		// make a debug signal to QEMU
-		push %dx
-		push %ax
-		push %bx
-		mov $0x2333, %dx // destination port
-		mov $0xE399, %ax // dump stack command
-		mov $(6+48), %bx // dump length
-		out %ax, %dx
-		pop %bx
-		pop %ax
-		pop %dx
+.macro chk_revert_kernel_rsp has_error_code magicDbg
+	.if \has_error_code == 1 // Exception
+		.if \magicDbg == 1
+			// make a debug signal to QEMU
+			push %dx
+			push %ax
+			push %bx
+			mov $0x2333, %dx // destination port
+			mov $0xE399, %ax // dump stack command
+			mov $(6+48), %bx // dump length
+			out %ax, %dx
+			pop %bx
+			pop %ax
+			pop %dx
+		.endif
 		
 		cmp $__USER_CS, 16(%rsp)
-		je _keep_rsp_and_go_\@ //error_entry will take care of the TSS stack...
+		je _keep_rsp_and_go_\@ //error_entry will take care of the stack...
 		// is from kernel space, so we should leave TSS quickly
 		push %rax // backup rax
 		push %rbx // backup rbx
@@ -445,20 +436,110 @@ SYM_CODE_START(\asmsym)
 		andq $~0xf, %rsp // align to 16 bytes
 		sub $48, %rsp
 
-		// make a debug signal to QEMU
-		push %dx
-		push %ax
-		push %bx
-		mov $0x2333, %dx // destination port
-		mov $0xE399, %ax // dump stack command
-		mov $(6+48), %bx // dump length
-		out %ax, %dx
-		pop %bx
-		pop %ax
-		pop %dx
+		.if \magicDbg == 1
+			// make a debug signal to QEMU
+			push %dx
+			push %ax
+			push %bx
+			mov $0x2333, %dx // destination port
+			mov $0xE399, %ax // dump stack command
+			mov $(6+48), %bx // dump length
+			out %ax, %dx
+			pop %bx
+			pop %ax
+			pop %dx
+		.endif
+	.else // Interrupt
+		.if \magicDbg == 1
+			// make a debug signal to QEMU
+			push %dx
+			push %ax
+			push %bx
+			mov $0x2333, %dx // destination port
+			mov $0xE399, %ax // dump stack command
+			mov $(6+40), %bx // dump length
+			out %ax, %dx
+			pop %bx
+			pop %ax
+			pop %dx
+		.endif
+
+		cmp $__USER_CS, 8(%rsp)
+		je _keep_rsp_and_go_\@ //error_entry will take care of the TSS stack...
+		// is from kernel space, so we should leave TSS quickly
+		push %rax // backup rax
+		push %rbx // backup rbx
+		/* RSP Layout
+		RSP+0: RBX we just backed up
+		RSP+8: RAX we just backed up
+		RSP+16: orignal RIP
+		RSP+24: orignal CS
+		RSP+32: orignal RFLAGS
+		RSP+40: orignal RSP
+		RSP+48: orignal SS
+		*/
+		movq 40(%rsp), %rax // get the original rsp
+		andq $~0xf, %rax // align to 16 bytes
+
+		sub $8, %rax // space for "original SS"
+		movq 48(%rsp), %rbx 
+		movq %rbx, (%rax) // write "original SS"
+
+		sub $8, %rax // space for "orignal RSP"
+		movq 40(%rsp), %rbx
+		movq %rbx, (%rax) // write "orignal RSP"
+
+		sub $8, %rax // space for "orignal RFLAGS"
+		movq 32(%rsp), %rbx
+		movq %rbx, (%rax) // write "orignal RFLAGS"
 		
-		_keep_rsp_and_go_\@:
+		sub $8, %rax // space for "orignal CS"
+		movq 24(%rsp), %rbx
+		movq %rbx, (%rax) // write "orignal CS"
+		
+		sub $8, %rax // space for "orignal RIP"
+		movq 16(%rsp), %rbx
+		movq %rbx, (%rax) // write "orignal RIP"
+		
+		// orignal stack trick done!!!
+		pop %rbx // restore rbx
+		pop %rax // restore rax
+
+		movq 24(%rsp), %rsp // set rsp to the original value
+		andq $~0xf, %rsp // align to 16 bytes
+		sub $40, %rsp
+
+		.if \magicDbg == 1
+			// make a debug signal to QEMU
+			push %dx
+			push %ax
+			push %bx
+			mov $0x2333, %dx // destination port
+			mov $0xE399, %ax // dump stack command
+			mov $(6+40), %bx // dump length
+			out %ax, %dx
+			pop %bx
+			pop %ax
+			pop %dx
+		.endif
 	.endif
+	_keep_rsp_and_go_\@:
+.endm
+
+/**
+ * idtentry - Macro to generate entry stubs for simple IDT entries
+ * @vector:		Vector number
+ * @asmsym:		ASM symbol for the entry point
+ * @cfunc:		C function to be called
+ * @has_error_code:	Hardware pushed error code on stack
+ *
+ * The macro emits code to set up the kernel context for straight forward
+ * and simple IDT entries. No IST stack, no paranoid entry checks.
+ */
+.macro idtentry vector asmsym cfunc has_error_code:req
+SYM_CODE_START(\asmsym)
+	// we should revert to the original RSP if interrupt/excption is from kernel space
+	chk_revert_kernel_rsp \has_error_code 0
 
 	.if \vector == X86_TRAP_BP
 		/* #BP advances %rip to the next instruction */
@@ -535,6 +616,9 @@ SYM_CODE_END(\asmsym)
  */
 .macro idtentry_mce_db vector asmsym cfunc
 SYM_CODE_START(\asmsym)
+	// we should revert to the original RSP if interrupt/excption is from kernel space
+	chk_revert_kernel_rsp 0 0
+	
 	UNWIND_HINT_IRET_ENTRY
 	ENDBR
 	ASM_CLAC
@@ -592,6 +676,9 @@ SYM_CODE_END(\asmsym)
  */
 .macro idtentry_vc vector asmsym cfunc
 SYM_CODE_START(\asmsym)
+	// we should revert to the original RSP if interrupt/excption is from kernel space
+	chk_revert_kernel_rsp 1 0
+
 	UNWIND_HINT_IRET_ENTRY
 	ENDBR
 	ASM_CLAC
