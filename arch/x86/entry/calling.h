@@ -224,9 +224,8 @@ For 32-bit we have the following conventions - kernel is built with
 	 * are active. If clear CR3 already has the kernel page table
 	 * active.
 	 */
-	// bt	$PTI_USER_PGTABLE_BIT, \scratch_reg
-	// jnc	.Ldone_\@
-	// don't check
+	bt	$PTI_USER_PGTABLE_BIT, \scratch_reg
+	jnc	.Ldone_\@
 
 	ADJUST_KERNEL_CR3 \scratch_reg
 	movq	\scratch_reg, %cr3
@@ -243,9 +242,8 @@ For 32-bit we have the following conventions - kernel is built with
 	 * KERNEL pages can always resume with NOFLUSH as we do
 	 * explicit flushes.
 	 */
-	// bt	$PTI_USER_PGTABLE_BIT, \save_reg
-	// jnc	.Lnoflush_\@
-	// don't check
+	bt	$PTI_USER_PGTABLE_BIT, \save_reg
+	jnc	.Lnoflush_\@
 
 	/*
 	 * Check if there's a pending flush for the user ASID we're
