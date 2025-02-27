@@ -822,12 +822,13 @@ __bad_area_nosemaphore(struct pt_regs *regs, unsigned long error_code,
 		return;
 	}
 
-	if (!(error_code & X86_PF_USER)) {
-		/* Implicit user access to kernel memory -- just oops */
-		pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
-		page_fault_oops(regs, error_code, address);
-		return;
-	}
+	// if (!(error_code & X86_PF_USER)) {
+	// 	/* Implicit user access to kernel memory -- just oops */
+	// 	pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
+	// 	page_fault_oops(regs, error_code, address);
+	// 	return;
+	// }
+	// Ignore that check
 
 	/*
 	 * User mode accesses just cause a SIGSEGV.
