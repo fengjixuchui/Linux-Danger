@@ -390,52 +390,26 @@ SYM_CODE_END(xen_error_entry)
 		je _keep_rsp_and_go_\@ //error_entry will take care of the stack...
 		// is from kernel space, so we should leave TSS quickly
 		push %rax // backup rax
-		push %rbx // backup rbx
-		/* RSP Layout
-		RSP+0: RBX we just backed up
-		RSP+8: RAX we just backed up
-		RSP+16: error code
-		RSP+24: orignal RIP
-		RSP+32: orignal CS
-		RSP+40: orignal RFLAGS
-		RSP+48: orignal RSP
-		RSP+56: orignal SS
+		mov %rsp, %rax // set RAX to current stack
+		/* RAX Layout
+		RAX+0: RAX we just backed up
+		RAX+8: error code
+		RAX+16: orignal RIP
+		RAX+24: orignal CS
+		RAX+32: orignal RFLAGS
+		RAX+40: orignal RSP
+		RAX+48: orignal SS
 		*/
-		movq 48(%rsp), %rax // get the original rsp
-		andq $~0xf, %rax // align to 16 bytes
-
-		sub $8, %rax // space for "original SS"
-		movq 56(%rsp), %rbx 
-		movq %rbx, (%rax) // write "original SS"
-
-		sub $8, %rax // space for "orignal RSP"
-		movq 48(%rsp), %rbx
-		movq %rbx, (%rax) // write "orignal RSP"
-
-		sub $8, %rax // space for "orignal RFLAGS"
-		movq 40(%rsp), %rbx
-		movq %rbx, (%rax) // write "orignal RFLAGS"
-		
-		sub $8, %rax // space for "orignal CS"
-		movq 32(%rsp), %rbx
-		movq %rbx, (%rax) // write "orignal CS"
-		
-		sub $8, %rax // space for "orignal RIP"
-		movq 24(%rsp), %rbx
-		movq %rbx, (%rax) // write "orignal RIP"
-
-		sub $8, %rax // space for error code
-		movq 16(%rsp), %rbx
-		movq %rbx, (%rax) // write error code
-		
-		// orignal stack trick done!!!
-		pop %rbx // restore rbx
-		pop %rax // restore rax
-
-		movq 32(%rsp), %rsp // set rsp to the original value
+		movq 40(%rax), %rsp // set rsp to the orignal
 		andq $~0xf, %rsp // align to 16 bytes
-		sub $48, %rsp
-
+		pushq 48(%rax) // push "orignal SS"
+		pushq 40(%rax) // push "orignal RSP"
+		pushq 32(%rax) // push "orignal RFLAGS"
+		pushq 24(%rax) // push "orignal CS"
+		pushq 16(%rax) // push "orignal RIP"
+		pushq 8(%rax) // push error code
+		movq 0(%rax), %rax // restore rax
+		
 		.if \magicDbg == 1
 			// make a debug signal to QEMU
 			push %dx
@@ -468,46 +442,23 @@ SYM_CODE_END(xen_error_entry)
 		je _keep_rsp_and_go_\@ //error_entry will take care of the TSS stack...
 		// is from kernel space, so we should leave TSS quickly
 		push %rax // backup rax
-		push %rbx // backup rbx
-		/* RSP Layout
-		RSP+0: RBX we just backed up
-		RSP+8: RAX we just backed up
-		RSP+16: orignal RIP
-		RSP+24: orignal CS
-		RSP+32: orignal RFLAGS
-		RSP+40: orignal RSP
-		RSP+48: orignal SS
+		movq %rsp, %rax // set RAX to current stack
+		/* RAX Layout
+		RAX+0: RAX we just backed up
+		RAX+8: orignal RIP
+		RAX+16: orignal CS
+		RAX+24: orignal RFLAGS
+		RAX+32: orignal RSP
+		RAX+40: orignal SS
 		*/
-		movq 40(%rsp), %rax // get the original rsp
-		andq $~0xf, %rax // align to 16 bytes
-
-		sub $8, %rax // space for "original SS"
-		movq 48(%rsp), %rbx 
-		movq %rbx, (%rax) // write "original SS"
-
-		sub $8, %rax // space for "orignal RSP"
-		movq 40(%rsp), %rbx
-		movq %rbx, (%rax) // write "orignal RSP"
-
-		sub $8, %rax // space for "orignal RFLAGS"
-		movq 32(%rsp), %rbx
-		movq %rbx, (%rax) // write "orignal RFLAGS"
-		
-		sub $8, %rax // space for "orignal CS"
-		movq 24(%rsp), %rbx
-		movq %rbx, (%rax) // write "orignal CS"
-		
-		sub $8, %rax // space for "orignal RIP"
-		movq 16(%rsp), %rbx
-		movq %rbx, (%rax) // write "orignal RIP"
-		
-		// orignal stack trick done!!!
-		pop %rbx // restore rbx
-		pop %rax // restore rax
-
-		movq 24(%rsp), %rsp // set rsp to the original value
+		movq 32(%rax), %rsp // set rsp to the orignal
 		andq $~0xf, %rsp // align to 16 bytes
-		sub $40, %rsp
+		pushq 40(%rax) // push "orignal SS"
+		pushq 32(%rax) // push "orignal RSP"
+		pushq 24(%rax) // push "orignal RFLAGS"
+		pushq 16(%rax) // push "orignal CS"
+		pushq 8(%rax) // push "orignal RIP"
+		movq 0(%rax), %rax // restore rax
 
 		.if \magicDbg == 1
 			// make a debug signal to QEMU
