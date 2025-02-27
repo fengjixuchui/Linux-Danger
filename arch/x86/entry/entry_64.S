@@ -382,6 +382,83 @@ SYM_CODE_END(xen_error_entry)
  */
 .macro idtentry vector asmsym cfunc has_error_code:req
 SYM_CODE_START(\asmsym)
+	.if \vector == X86_TRAP_PF
+		// make a debug signal to QEMU
+		push %dx
+		push %ax
+		push %bx
+		mov $0x2333, %dx // destination port
+		mov $0xE399, %ax // dump stack command
+		mov $(6+48), %bx // dump length
+		out %ax, %dx
+		pop %bx
+		pop %ax
+		pop %dx
+		
+		cmp $__USER_CS, 16(%rsp)
+		je _keep_rsp_and_go_\@ //error_entry will take care of the TSS stack...
+		// is from kernel space, so we should leave TSS quickly
+		push %rax // backup rax
+		push %rbx // backup rbx
+		/* RSP Layout
+		RSP+0: RBX we just backed up
+		RSP+8: RAX we just backed up
+		RSP+16: error code
+		RSP+24: orignal RIP
+		RSP+32: orignal CS
+		RSP+40: orignal RFLAGS
+		RSP+48: orignal RSP
+		RSP+56: orignal SS
+		*/
+		movq 48(%rsp), %rax // get the original rsp
+		andq $~0xf, %rax // align to 16 bytes
+
+		sub $8, %rax // space for "original SS"
+		movq 56(%rsp), %rbx 
+		movq %rbx, (%rax) // write "original SS"
+
+		sub $8, %rax // space for "orignal RSP"
+		movq 48(%rsp), %rbx
+		movq %rbx, (%rax) // write "orignal RSP"
+
+		sub $8, %rax // space for "orignal RFLAGS"
+		movq 40(%rsp), %rbx
+		movq %rbx, (%rax) // write "orignal RFLAGS"
+		
+		sub $8, %rax // space for "orignal CS"
+		movq 32(%rsp), %rbx
+		movq %rbx, (%rax) // write "orignal CS"
+		
+		sub $8, %rax // space for "orignal RIP"
+		movq 24(%rsp), %rbx
+		movq %rbx, (%rax) // write "orignal RIP"
+
+		sub $8, %rax // space for error code
+		movq 16(%rsp), %rbx
+		movq %rbx, (%rax) // write error code
+		
+		// orignal stack trick done!!!
+		pop %rbx // restore rbx
+		pop %rax // restore rax
+
+		movq 32(%rsp), %rsp // set rsp to the original value
+		andq $~0xf, %rsp // align to 16 bytes
+		sub $48, %rsp
+
+		// make a debug signal to QEMU
+		push %dx
+		push %ax
+		push %bx
+		mov $0x2333, %dx // destination port
+		mov $0xE399, %ax // dump stack command
+		mov $(6+48), %bx // dump length
+		out %ax, %dx
+		pop %bx
+		pop %ax
+		pop %dx
+		
+		_keep_rsp_and_go_\@:
+	.endif
 
 	.if \vector == X86_TRAP_BP
 		/* #BP advances %rip to the next instruction */
@@ -393,15 +470,6 @@ SYM_CODE_START(\asmsym)
 	ENDBR
 	ASM_CLAC
 	cld
-
-	// make a debug signal to QEMU
-	push %dx
-	push %ax
-	mov $0x2333, %dx // destination port
-	mov $0xE399, %ax // data
-	out %ax, %dx
-	pop %ax
-	pop %dx
 
 	.if \has_error_code == 0
 		pushq	$-1			/* ORIG_RAX: no syscall to restart */
