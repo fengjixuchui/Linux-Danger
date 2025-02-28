@@ -2179,11 +2179,16 @@ static inline void tss_setup_ist(struct tss_struct *tss)
 {
 	/* Set up the per-CPU TSS IST stacks */
 	tss->x86_tss.ist[IST_INDEX_DF] = __this_cpu_ist_top_va(DF);
+	pr_alert("!!! DF stack: 0x%llx !!!\n", tss->x86_tss.ist[IST_INDEX_DF]);
 	tss->x86_tss.ist[IST_INDEX_NMI] = __this_cpu_ist_top_va(NMI);
+	pr_alert("!!! NMI stack: 0x%llx !!!\n", tss->x86_tss.ist[IST_INDEX_NMI]);
 	tss->x86_tss.ist[IST_INDEX_DB] = __this_cpu_ist_top_va(DB);
+	pr_alert("!!! DB stack: 0x%llx !!!\n", tss->x86_tss.ist[IST_INDEX_DB]);
 	tss->x86_tss.ist[IST_INDEX_MCE] = __this_cpu_ist_top_va(MCE);
+	pr_alert("!!! MCE stack: 0x%llx !!!\n", tss->x86_tss.ist[IST_INDEX_MCE]);
 	/* Only mapped when SEV-ES is active */
 	tss->x86_tss.ist[IST_INDEX_VC] = __this_cpu_ist_top_va(VC);
+	pr_alert("!!! VC stack: 0x%llx !!!\n", tss->x86_tss.ist[IST_INDEX_VC]);
 }
 
 #else /* CONFIG_X86_64 */

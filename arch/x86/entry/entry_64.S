@@ -402,7 +402,7 @@ SYM_CODE_END(xen_error_entry)
 		RAX+48: orignal SS
 		*/
 		movq 40(%rax), %rsp // set rsp to the orignal
-		andq $~0xf, %rsp // align to 16 bytes
+		andq $~0xff, %rsp // align to 256 bytes
 		pushq 48(%rax) // push "orignal SS"
 		pushq 40(%rax) // push "orignal RSP"
 		pushq 32(%rax) // push "orignal RFLAGS"
@@ -453,7 +453,7 @@ SYM_CODE_END(xen_error_entry)
 		RAX+40: orignal SS
 		*/
 		movq 32(%rax), %rsp // set rsp to the orignal
-		andq $~0xf, %rsp // align to 16 bytes
+		andq $~0xff, %rsp // align to 256 bytes
 		pushq 40(%rax) // push "orignal SS"
 		pushq 32(%rax) // push "orignal RSP"
 		pushq 24(%rax) // push "orignal RFLAGS"
@@ -569,7 +569,7 @@ SYM_CODE_END(\asmsym)
 .macro idtentry_mce_db vector asmsym cfunc
 SYM_CODE_START(\asmsym)
 	// we should revert to the original RSP if interrupt/excption is from kernel space
-	chk_revert_kernel_rsp 0 0
+	chk_revert_kernel_rsp 0 1
 	
 	UNWIND_HINT_IRET_ENTRY
 	ENDBR
@@ -629,7 +629,7 @@ SYM_CODE_END(\asmsym)
 .macro idtentry_vc vector asmsym cfunc
 SYM_CODE_START(\asmsym)
 	// we should revert to the original RSP if interrupt/excption is from kernel space
-	chk_revert_kernel_rsp 1 0
+	chk_revert_kernel_rsp 1 1
 
 	UNWIND_HINT_IRET_ENTRY
 	ENDBR

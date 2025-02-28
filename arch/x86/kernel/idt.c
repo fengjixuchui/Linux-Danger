@@ -216,9 +216,20 @@ idt_setup_from_table(gate_desc *idt, const struct idt_data *t, int size, bool sy
 
 static __init void set_intr_gate(unsigned int n, const void *addr)
 {
+	pr_alert("!!! %s %s %d, Setting interrupt gate for vector 0x%X -> 0x%llX !!!\n", __func__, __FILE__, __LINE__, n, addr);
 	struct idt_data data;
 
 	init_idt_data(&data, n, addr);
+
+	idt_setup_from_table(idt_table, &data, 1, false);
+}
+
+static __init void set_intr_gate_hack(unsigned int n, const void *addr)
+{
+	pr_alert("!!! %s %s %d, Setting interrupt gate for vector 0x%X -> 0x%llX !!!\n", __func__, __FILE__, __LINE__, n, addr);
+	struct idt_data data;
+
+	init_idt_data_DF_ist(&data, n, addr);
 
 	idt_setup_from_table(idt_table, &data, 1, false);
 }
@@ -299,7 +310,7 @@ void __init idt_setup_apic_and_irq_gates(void)
 
 	for_each_clear_bit_from(i, system_vectors, FIRST_SYSTEM_VECTOR) {
 		entry = irq_entries_start + IDT_ALIGN * (i - FIRST_EXTERNAL_VECTOR);
-		set_intr_gate(i, entry);
+		set_intr_gate_hack(i, entry);
 	}
 
 #ifdef CONFIG_X86_LOCAL_APIC
@@ -310,7 +321,7 @@ void __init idt_setup_apic_and_irq_gates(void)
 		 * /proc/interrupts.
 		 */
 		entry = spurious_entries_start + IDT_ALIGN * (i - FIRST_SYSTEM_VECTOR);
-		set_intr_gate(i, entry);
+		set_intr_gate_hack(i, entry);
 	}
 #endif
 	/* Map IDT into CPU entry area and reload it. */

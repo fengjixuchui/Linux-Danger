@@ -985,6 +985,7 @@ static void
 __irq_do_set_handler(struct irq_desc *desc, irq_flow_handler_t handle,
 		     int is_chained, const char *name)
 {
+	pr_alert("!!! %s, %s, %d name = %s, handle = 0x%llX !!!\n", __func__, __FILE__, __LINE__, name, handle);
 	if (!handle) {
 		handle = handle_bad_irq;
 	} else {

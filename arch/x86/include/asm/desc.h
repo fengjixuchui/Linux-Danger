@@ -417,6 +417,20 @@ static inline void init_idt_data(struct idt_data *data, unsigned int n,
 	data->bits.p	= 1;
 }
 
+static inline void init_idt_data_DF_ist(struct idt_data *data, unsigned int n,
+				 const void *addr)
+{
+	BUG_ON(n > 0xFF);
+
+	memset(data, 0, sizeof(*data));
+	data->vector	= n;
+	data->addr	= addr;
+	data->segment	= __KERNEL_CS;
+	data->bits.type	= GATE_INTERRUPT;
+	data->bits.ist	= IST_INDEX_DF + 1;
+	data->bits.p	= 1;
+}
+
 static inline void idt_init_desc(gate_desc *gate, const struct idt_data *d)
 {
 	unsigned long addr = (unsigned long) d->addr;
