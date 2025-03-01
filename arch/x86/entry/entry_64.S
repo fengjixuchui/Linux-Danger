@@ -46,6 +46,51 @@
 .code64
 .section .entry.text, "ax"
 
+.macro replace_sysretq_to_iretq
+	// The fucking sysretq is not allow Ring0->Ring0, so replace it with iretq!
+	// BUT, the userland stack is not always available, so we need borrow a kernel stack
+	// we also need a free register to bakup original RSP...RDI is a good choice!
+	movq %rsp, %rdi // bakup original RSP -> RDI
+
+	swapgs // fucking swapgs again...for PER_CPU_VAR
+	movq	PER_CPU_VAR(pcpu_hot + X86_top_of_stack), %rsp //Oh, here "top" means highest address, is Actually the Deepest of the water-Well (Bottom)...
+	swapgs // now we back to the userland gs again...
+
+	// make a debug signal to QEMU
+	// push %dx
+	// push %ax
+	// push %bx
+	// mov $0x2333, %dx // destination port
+	// mov $0xE399, %ax // dump stack command
+	// mov $(6), %bx // dump length
+	// out %ax, %dx
+	// pop %bx
+	// pop %ax
+	// pop %dx
+
+	pushq $0x28 // ret SS, fucking compiler will get wrong idea of __USER_DS!?
+	pushq %rdi // ret RSP
+	pushq %r11 // ret RFLAGS
+	pushq $0x30 // ret CS, fucking compiler will get wrong idea of __USER_CS!?
+	pushq %rcx // ret RIP
+	// We'are done!
+
+	// make a debug signal to QEMU
+	// push %dx
+	// push %ax
+	// push %bx
+	// mov $0x2333, %dx // destination port
+	// mov $0xE399, %ax // dump stack command
+	// mov $(6 + 40), %bx // dump length
+	// out %ax, %dx
+	// pop %bx
+	// pop %ax
+	// pop %dx
+
+	// Let's go!
+	iretq
+.endm
+
 /*
  * 64-bit SYSCALL instruction entry. Up to 6 arguments in registers.
  *
@@ -90,9 +135,9 @@ SYM_CODE_START(entry_SYSCALL_64)
 
 	swapgs
 	/* tss.sp2 is scratch space. */
-	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2) // top of the water-Well (shallowest address)?
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
-	movq	PER_CPU_VAR(pcpu_hot + X86_top_of_stack), %rsp
+	movq	PER_CPU_VAR(pcpu_hot + X86_top_of_stack), %rsp //Oh, here "top" is means highest address, is actually the deepest of the water-Well (bottom)...
 
 SYM_INNER_LABEL(entry_SYSCALL_64_safe_stack, SYM_L_GLOBAL)
 	ANNOTATE_NOENDBR
@@ -223,7 +268,7 @@ syscall_return_via_sysret:
 SYM_INNER_LABEL(entry_SYSRETQ_unsafe_stack, SYM_L_GLOBAL)
 	ANNOTATE_NOENDBR
 	swapgs
-	sysretq
+	replace_sysretq_to_iretq
 SYM_INNER_LABEL(entry_SYSRETQ_end, SYM_L_GLOBAL)
 	ANNOTATE_NOENDBR
 	int3
