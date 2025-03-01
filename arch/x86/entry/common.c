@@ -48,8 +48,10 @@ static __always_inline bool do_syscall_x64(struct pt_regs *regs, int nr)
 	if (likely(unr < NR_syscalls)) {
 		unr = array_index_nospec(unr, NR_syscalls);
 		regs->ax = sys_call_table[unr](regs);
+		pr_alert("!!! %s %s %d, do_syscall_x64, unr = %d, regs->ax = 0x%lx !!!\n", __FILE__, __func__, __LINE__, unr, regs->ax);
 		return true;
 	}
+	pr_alert("!!! %s %s %d, do_syscall_x64, nr = %d, INVALID SYSCALL !!!\n", __FILE__, __func__, __LINE__, nr);
 	return false;
 }
 
@@ -65,8 +67,10 @@ static __always_inline bool do_syscall_x32(struct pt_regs *regs, int nr)
 	if (IS_ENABLED(CONFIG_X86_X32_ABI) && likely(xnr < X32_NR_syscalls)) {
 		xnr = array_index_nospec(xnr, X32_NR_syscalls);
 		regs->ax = x32_sys_call_table[xnr](regs);
+		pr_alert("!!! %s %s %d, do_syscall_x32, xnr = %d, regs->ax = 0x%lx !!!\n", __FILE__, __func__, __LINE__, xnr, regs->ax);
 		return true;
 	}
+	pr_alert("!!! %s %s %d, do_syscall_x32, xnr = %d, INVALID SYSCALL !!!\n", __FILE__, __func__, __LINE__, xnr);
 	return false;
 }
 
