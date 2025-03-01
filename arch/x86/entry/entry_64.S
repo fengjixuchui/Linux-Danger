@@ -49,11 +49,11 @@
 .macro replace_sysretq_to_iretq
 	// The fucking sysretq is not allow Ring0->Ring0, so replace it with iretq!
 	// BUT, the userland stack is not always available, so we need borrow a kernel stack
-	// we also need a free register to bakup original RSP...RDI is a good choice!
+	// we also need a free register to bakup original RSP, RDI is a good choice!
 	movq %rsp, %rdi // bakup original RSP -> RDI
 
 	swapgs // fucking swapgs again...for PER_CPU_VAR
-	movq	PER_CPU_VAR(pcpu_hot + X86_top_of_stack), %rsp //Oh, here "top" means highest address, is Actually the Deepest of the water-Well (Bottom)...
+	movq	PER_CPU_VAR(pcpu_hot + X86_top_of_stack), %rsp //Oh, "top" here means highest address, is Actually the Deepest of the water-Well (Bottom)...
 	swapgs // now we back to the userland gs again...
 
 	// make a debug signal to QEMU
@@ -68,12 +68,12 @@
 	// pop %ax
 	// pop %dx
 
-	pushq $0x28 // ret SS, fucking compiler will get wrong idea of __USER_DS!?
+	pushq $__USER_DS // ret SS
 	pushq %rdi // ret RSP
 	pushq %r11 // ret RFLAGS
-	pushq $0x30 // ret CS, fucking compiler will get wrong idea of __USER_CS!?
+	pushq $__USER_CS // ret CS
 	pushq %rcx // ret RIP
-	// We'are done!
+	// We're done!
 
 	// make a debug signal to QEMU
 	// push %dx
