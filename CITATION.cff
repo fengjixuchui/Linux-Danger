@@ -1,0 +1,12 @@
+cff-version: 1.0.0
+message: If you use this project, please cite it as below.
+title: Linux Kernel Danger
+authors:
+  - family-names: Linux Kernel Danger Team
+url: https://github.com/UEFI-code/Linux-Danger
+preferred-citation:
+  type: opensource-software-toolkit
+  title: "Linux Kernel Danger: An Open-Source Project Enabling Usermode to Run in Ring 0"
+  authors:
+    - family-names: Zhang
+      given-names: Shizhuo

@@ -79,7 +79,9 @@ update-grub
 - [x] Disable Alternatives
 - [x] Adjust IST to FORCE Interrupt Stack always available (Most interrupts/exceptions will use #DF stack, then Manually carry stack back if from Kernel-Mode)
 - [x] Replace `sysretq` with `iretq`
+- [x] `/mini_shell` SUCCESSFULLY RUNS IN RING0!!!
 
 ## Tested on
 
-- [x] [QEMU_Danger_x86](https://github.com/UEFI-code/QEMU_Danger_x86), /hello is a usermode HelloWorld-ELF running in Ring0, `./qemu-system-x86_64 -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd -drive if=pflash,format=raw,file=/usr/share/OVMF/OVMF_VARS_4M.fd -m 4G -hda ubuntu.vhdx -serial stdio`, `console=ttyS0`
+- [x] [QEMU_Danger_x86](https://github.com/UEFI-code/QEMU_Danger_x86), `./qemu-system-x86_64 -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd -drive if=pflash,format=raw,file=/usr/share/OVMF/OVMF_VARS_4M.fd -m 4G -hda ubuntu.vhdx -serial stdio -smp 16`, `console=ttyS0`, `/mini_shell` is a usermode ELF running in Ring0
+- [ ] Hyper-V, Not Working...Maybe Hyper-V ignored IST at non-#DF conditions?
