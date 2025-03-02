@@ -1171,10 +1171,10 @@ bool fault_in_kernel_space(unsigned long address)
 	 */
 	if (IS_ENABLED(CONFIG_X86_64) && is_vsyscall_vaddr(address))
 	{
-		pr_alert("!!! %s %s %d, recognized as vsyscall_vaddr !!!\n", __FILE__, __func__, __LINE__);
+		//pr_alert("!!! %s %s %d, recognized as vsyscall_vaddr !!!\n", __FILE__, __func__, __LINE__);
 		return false;
 	}
-	pr_alert("!!! %s %s %d, TASK_SIZE_MAX: 0x%llx, address: 0x%llx !!!\n", __FILE__, __func__, __LINE__, TASK_SIZE_MAX, address);
+	//pr_alert("!!! %s %s %d, TASK_SIZE_MAX: 0x%llx, address: 0x%llx !!!\n", __FILE__, __func__, __LINE__, TASK_SIZE_MAX, address);
 	return address >= TASK_SIZE_MAX;
 }
 
