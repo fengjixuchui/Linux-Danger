@@ -70,11 +70,16 @@ update-grub
 
 # x64 Hacking Status
 
-- [] CR0 Write Protection Disable
+- [ ] CR0 Write Protection Disable
 - [x] Hack the user GDT to Ring 0
-- [x] Disabled PTI
-- [x] Disabled SMEP/SMAP
-- [x] Hacked User Segment Descriptors to Ring 0
-- [x] Hacked User Page Table Templates to Ring 0
-- [x] Disabled Alternatives
-- [x] Adjust IST to make sure stack always available
+- [x] Disable PTI
+- [x] Disable SMEP/SMAP
+- [x] Hack User Segment Descriptors to Ring 0
+- [x] Hack User Page Table Templates to Ring 0
+- [x] Disable Alternatives
+- [x] Adjust IST to FORCE Interrupt Stack always available (Most interrupts/exceptions will use #DF stack, then Manually carry stack back if from Kernel-Mode)
+- [x] Replace `sysretq` with `iretq`
+
+## Tested on
+
+- [x] [QEMU_Danger_x86](https://github.com/UEFI-code/QEMU_Danger_x86), /hello is a usermode HelloWorld-ELF running in Ring0, `./qemu-system-x86_64 -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd -drive if=pflash,format=raw,file=/usr/share/OVMF/OVMF_VARS_4M.fd -m 4G -hda ubuntu.vhdx -serial stdio`, `console=ttyS0`
