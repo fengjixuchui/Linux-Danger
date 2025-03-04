@@ -84,8 +84,6 @@ int putreg(struct task_struct *child, int regno, unsigned long value)
 	case ES:
 	case SS:
 	case CS:
-		if (value && (value & 3) != 3)
-			return -EIO;
 		value &= 0xffff;
 		break;
 

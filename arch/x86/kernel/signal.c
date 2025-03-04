@@ -250,6 +250,7 @@ handle_signal(struct ksignal *ksig, struct pt_regs *regs)
 		case -ERESTARTNOINTR:
 			regs->ax = regs->orig_ax;
 			regs->ip -= 2;
+			//pr_alert("!!! %s %s %d, setting regs->ip = %lx\n", __FUNC__, __FILE__, __LINE__, regs->ip);
 			break;
 		}
 	}

@@ -27,24 +27,7 @@
  */
 static void force_valid_ss(struct pt_regs *regs)
 {
-	u32 ar;
-	asm volatile ("lar %[old_ss], %[ar]\n\t"
-		      "jz 1f\n\t"		/* If invalid: */
-		      "xorl %[ar], %[ar]\n\t"	/* set ar = 0 */
-		      "1:"
-		      : [ar] "=r" (ar)
-		      : [old_ss] "rm" ((u16)regs->ss));
-
-	/*
-	 * For a valid 64-bit user context, we need DPL 3, type
-	 * read-write data or read-write exp-down data, and S and P
-	 * set.  We can't use VERW because VERW doesn't check the
-	 * P bit.
-	 */
-	ar &= AR_DPL_MASK | AR_S | AR_P | AR_TYPE_MASK;
-	if (ar != (AR_DPL3 | AR_S | AR_P | AR_TYPE_RWDATA) &&
-	    ar != (AR_DPL3 | AR_S | AR_P | AR_TYPE_RWDATA_EXPDOWN))
-		regs->ss = __USER_DS;
+	regs->ss = __USER_DS;
 }
 
 static bool restore_sigcontext(struct pt_regs *regs,
@@ -77,9 +60,9 @@ static bool restore_sigcontext(struct pt_regs *regs,
 	regs->r14 = sc.r14;
 	regs->r15 = sc.r15;
 
-	/* Get CS/SS and force CPL3 */
-	regs->cs = sc.cs | 0x03;
-	regs->ss = sc.ss | 0x03;
+	// kept original segment registers!
+	regs->cs = sc.cs;
+	regs->ss = sc.ss;
 
 	regs->flags = (regs->flags & ~FIX_EFLAGS) | (sc.flags & FIX_EFLAGS);
 	/* disable syscall checks */
