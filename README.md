@@ -1,6 +1,8 @@
 # Linux kernel DANGER
 
-This project aims to hack the Linux kernel that make usermode code run in Ring0.
+This project aims to hack the Linux kernel that make Usermode running in Ring0!
+
+![Logo](./linux_danger.png)
 
 # Omoshiroi Code Files
 
