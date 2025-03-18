@@ -133,9 +133,9 @@ static __always_inline int user_mode(struct pt_regs *regs)
 // Hack this to trick the kernel code NOT consider CPL
 #ifdef CONFIG_X86_32
 	//return ((regs->cs & SEGMENT_RPL_MASK) | (regs->flags & X86_VM_MASK)) >= USER_RPL;
-	return (regs->cs == __USER_CS) || ((regs->flags & X86_VM_MASK) == X86_VM_MASK);
+	return (regs->cs != __KERNEL_CS) || ((regs->flags & X86_VM_MASK) == X86_VM_MASK);
 #else
-	return regs->cs == __USER_CS;
+	return regs->cs != __KERNEL_CS;
 #endif
 
 }
@@ -157,10 +157,10 @@ static inline bool user_64bit_mode(struct pt_regs *regs)
 	 * On non-paravirt systems, this is the only long mode CPL 3
 	 * selector.  We do not allow long mode selectors in the LDT.
 	 */
-	return regs->cs == __USER_CS;
+	return regs->cs != __KERNEL_CS;
 #else
 	/* Headers are too twisted for this to go in paravirt.h. */
-	return regs->cs == __USER_CS || regs->cs == pv_info.extra_user_64bit_cs;
+	return regs->cs != __KERNEL_CS || regs->cs == pv_info.extra_user_64bit_cs;
 #endif
 #else /* !CONFIG_X86_64 */
 	return false;

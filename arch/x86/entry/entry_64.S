@@ -203,7 +203,7 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	cmpq	%rcx, %r11
 	jne	swapgs_restore_regs_and_return_to_usermode
 
-	cmpq	$__USER_CS, CS(%rsp)		/* CS must match SYSRET */
+	cmpq	$__KERNEL_CS, CS(%rsp)		/* CS must match SYSRET */
 	jne	swapgs_restore_regs_and_return_to_usermode
 
 	movq	R11(%rsp), %r11
@@ -233,7 +233,7 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 
 	/* nothing to check for RSP */
 
-	cmpq	$__USER_DS, SS(%rsp)		/* SS must match SYSRET */
+	cmpq	$__KERNEL_DS, SS(%rsp)		/* SS must match SYSRET */
 	jne	swapgs_restore_regs_and_return_to_usermode
 
 	/*
@@ -431,8 +431,8 @@ SYM_CODE_END(xen_error_entry)
 			pop %dx
 		.endif
 		
-		cmp $__USER_CS, 16(%rsp)
-		je _keep_rsp_and_go_\@ //error_entry will take care of the stack...
+		cmp $__KERNEL_CS, 16(%rsp)
+		jne _keep_rsp_and_go_\@ //This is from user, error_entry will take care of the stack...
 		// is from kernel space, so we should leave TSS quickly
 		push %rax // backup rax
 		mov %rsp, %rax // set RAX to current stack
@@ -483,8 +483,8 @@ SYM_CODE_END(xen_error_entry)
 			pop %dx
 		.endif
 
-		cmp $__USER_CS, 8(%rsp)
-		je _keep_rsp_and_go_\@ //error_entry will take care of the TSS stack...
+		cmp $__KERNEL_CS, 8(%rsp)
+		jne _keep_rsp_and_go_\@ //This is from user, error_entry will take care of the TSS stack...
 		// is from kernel space, so we should leave TSS quickly
 		push %rax // backup rax
 		movq %rsp, %rax // set RAX to current stack
@@ -557,8 +557,8 @@ SYM_CODE_START(\asmsym)
 		 * If coming from kernel space, create a 6-word gap to allow the
 		 * int3 handler to emulate a call instruction.
 		 */
-		cmp	$__USER_CS, CS-ORIG_RAX(%rsp)
-		je	.Lfrom_usermode_no_gap_\@
+		cmp	$__KERNEL_CS, CS-ORIG_RAX(%rsp)
+		jne	.Lfrom_usermode_no_gap_\@
 		.rept	6
 		pushq	5*8(%rsp)
 		.endr
@@ -626,8 +626,8 @@ SYM_CODE_START(\asmsym)
 	 * If the entry is from userspace, switch stacks and treat it as
 	 * a normal entry.
 	 */
-	cmp	$__USER_CS, CS-ORIG_RAX(%rsp)
-	je	.Lfrom_usermode_switch_stack_\@
+	cmp	$__KERNEL_CS, CS-ORIG_RAX(%rsp)
+	jne	.Lfrom_usermode_switch_stack_\@
 
 	/* paranoid_entry returns GS information for paranoid_exit in EBX. */
 	call	paranoid_entry
@@ -684,8 +684,8 @@ SYM_CODE_START(\asmsym)
 	 * If the entry is from userspace, switch stacks and treat it as
 	 * a normal entry.
 	 */
-	cmp	$__USER_CS, CS-ORIG_RAX(%rsp)
-	je	.Lfrom_usermode_switch_stack_\@
+	cmp	$__KERNEL_CS, CS-ORIG_RAX(%rsp)
+	jne	.Lfrom_usermode_switch_stack_\@
 
 	/*
 	 * paranoid_entry returns SWAPGS flag for paranoid_exit in EBX.
@@ -1207,8 +1207,8 @@ SYM_CODE_START(error_entry)
 	PUSH_AND_CLEAR_REGS save_ret=1
 	ENCODE_FRAME_POINTER 8
 
-	cmp	$__USER_CS, CS+8(%rsp)
-	jne	.Lerror_kernelspace
+	cmp	$__KERNEL_CS, CS+8(%rsp)
+	je	.Lerror_kernelspace
 
 	/*
 	 * We entered from user mode or we're pretending to have entered
@@ -1288,8 +1288,8 @@ SYM_CODE_END(error_entry)
 SYM_CODE_START_LOCAL(error_return)
 	UNWIND_HINT_REGS
 	DEBUG_ENTRY_ASSERT_IRQS_OFF
-	cmp	$__USER_CS, CS(%rsp)
-	jne	restore_regs_and_return_to_kernel
+	cmp	$__KERNEL_CS, CS(%rsp)
+	je	restore_regs_and_return_to_kernel
 	jmp	swapgs_restore_regs_and_return_to_usermode
 SYM_CODE_END(error_return)
 
@@ -1349,8 +1349,8 @@ SYM_CODE_START(asm_exc_nmi)
 	/* Use %rdx as our temp variable throughout */
 	pushq	%rdx
 
-	cmp	$__USER_CS, CS-RIP+8(%rsp)
-	jne	.Lnmi_from_kernel
+	cmp	$__KERNEL_CS, CS-RIP+8(%rsp)
+	je	.Lnmi_from_kernel
 
 	/*
 	 * NMI from user mode.  We need to run on the thread stack, but we
