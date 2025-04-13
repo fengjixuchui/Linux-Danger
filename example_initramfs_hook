@@ -5,7 +5,7 @@ case $1 in
     prereqs) prereqs; exit 0;;
 esac
 
-echo "Adding /hello /mini_shell to initramfs"
+echo "Adding /hello /hello2 /mini_shell to initramfs"
 cp /hello ${DESTDIR}/
+cp /hello2 ${DESTDIR}/
 cp /mini_shell ${DESTDIR}/
-
