@@ -99,16 +99,24 @@ int main(int argc, char **argv)
 	signal(SIGKILL, dummy_handler);
 	printf("Successfully registered signal handler for SIGKILL\n");
 
+	// then, test SIMD
+	unsigned int a[4] = {1, 2, 3, 4};
+	unsigned int b[4] = {5, 6, 7, 8};
+	unsigned int c[4] = {0};
+	asm volatile (
+		"movdqa %[a], %%xmm0\n"
+		"movdqa %[b], %%xmm1\n"
+		"addps %%xmm1, %%xmm0\n"
+		"movdqa %%xmm0, %[c]\n"
+		: [c] "=m" (c)
+		: [a] "m" (a), [b] "m" (b)
+	);
+	printf("SIMD test passed, c = [%d, %d, %d, %d]\n", c[0], c[1], c[2], c[3]);
+
 	printf("Almost passed all the tests\n");
 	// then, test scanf
-	int a = 0;
+	int num = 0;
 	printf("Please input an integer: ");
-	scanf("%d", &a);
-	printf("You have input: %d\n", a);
-	
-	while(1)
-	{
-		printf("Hello from Usermode, CS = 0x%x, DS = 0x%x, SS = 0x%x, PID = %d\n", cs, ds, ss, pid);
-		sleep(1);
-	}
+	scanf("%d", &num);
+	printf("You have input: %d\n", num);
 }
