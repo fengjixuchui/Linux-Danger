@@ -70,6 +70,12 @@ make install
 update-grub
 ```
 
+Or, get the `vmlinuz` and `initrd`, and then using QEMU to boot the kernel.
+
+```
+qemu-system-x86_64 -kernel vmlinuz -initrd initrd.img -append "root=/dev/ram0 console=ttyS0" -m 512M -serial stdio
+```
+
 # x64 Hacking Status
 
 - [ ] CR0 Write Protection Disable
