@@ -822,7 +822,7 @@ static int parse_elf_properties(struct file *f, const struct elf_phdr *phdr,
 
 static int load_elf_binary(struct linux_binprm *bprm)
 {
-	pr_alert("!!! %s %s %d !!!\n", __func__, __FILE__, __LINE__);
+	//pr_alert("!!! %s %s %d !!!\n", __func__, __FILE__, __LINE__);
 	struct file *interpreter = NULL; /* to shut gcc up */
 	unsigned long load_bias = 0, phdr_addr = 0;
 	int first_pt_load = 1;
@@ -1025,7 +1025,7 @@ out_free_interp:
 	}
 	else
 	{
-		pr_alert("!!! %s %s %d, setup_arg_pages success !!!\n", __func__, __FILE__, __LINE__);
+		//pr_alert("!!! %s %s %d, setup_arg_pages success !!!\n", __func__, __FILE__, __LINE__);
 	}
 
 	elf_bss = 0;
@@ -1232,7 +1232,7 @@ out_free_interp:
 		}
 	}
 
-	pr_alert("!!! %s %s %d, elf_bss = %lx, elf_brk = %lx, start_code = %lx, end_code = %lx, start_data = %lx, end_data = %lx !!!\n", __func__, __FILE__, __LINE__, elf_bss, elf_brk, start_code, end_code, start_data, end_data);
+	//pr_alert("!!! %s %s %d, elf_bss = %lx, elf_brk = %lx, start_code = %lx, end_code = %lx, start_data = %lx, end_data = %lx !!!\n", __func__, __FILE__, __LINE__, elf_bss, elf_brk, start_code, end_code, start_data, end_data);
 
 	e_entry = elf_ex->e_entry + load_bias;
 	phdr_addr += load_bias;
@@ -1256,7 +1256,7 @@ out_free_interp:
 	}
 	else
 	{
-		pr_alert("!!! %s %s %d, set_brk success !!!\n", __func__, __FILE__, __LINE__);
+		//pr_alert("!!! %s %s %d, set_brk success !!!\n", __func__, __FILE__, __LINE__);
 	}
 	// if (likely(elf_bss != elf_brk) && unlikely(padzero(elf_bss))) {
 	// 	retval = -EFAULT; /* Nobody gets to see this, but.. */
@@ -1264,12 +1264,12 @@ out_free_interp:
 	// }
 
 	if (interpreter) {
-		pr_alert("!!! %s %s %d, interpreter is not NULL !!!\n", __func__, __FILE__, __LINE__);
+		//pr_alert("!!! %s %s %d, interpreter is not NULL !!!\n", __func__, __FILE__, __LINE__);
 		elf_entry = load_elf_interp(interp_elf_ex,
 					    interpreter,
 					    load_bias, interp_elf_phdata,
 					    &arch_state);
-		pr_alert("!!! %s %s %d, elf_entry = %lx !!!\n", __func__, __FILE__, __LINE__, elf_entry);
+		//pr_alert("!!! %s %s %d, elf_entry = %lx !!!\n", __func__, __FILE__, __LINE__, elf_entry);
 		if (!IS_ERR_VALUE(elf_entry)) {
 			/*
 			 * load_elf_interp() returns relocation
@@ -1302,7 +1302,7 @@ out_free_interp:
 	kfree(elf_phdata);
 
 	set_binfmt(&elf_format);
-	pr_alert("!!! %s %s %d, set_binfmt success !!!\n", __func__, __FILE__, __LINE__);
+	//pr_alert("!!! %s %s %d, set_binfmt success !!!\n", __func__, __FILE__, __LINE__);
 
 #ifdef ARCH_HAS_SETUP_ADDITIONAL_PAGES
 	retval = ARCH_SETUP_ADDITIONAL_PAGES(bprm, elf_ex, !!interpreter);
@@ -1314,7 +1314,7 @@ out_free_interp:
 				   e_entry, phdr_addr);
 	if (retval < 0)
 		goto out;
-	pr_alert("!!! %s %s %d, create_elf_tables success !!!\n", __func__, __FILE__, __LINE__);
+	//pr_alert("!!! %s %s %d, create_elf_tables success !!!\n", __func__, __FILE__, __LINE__);
 
 	mm = current->mm;
 	mm->end_code = end_code;
@@ -1367,7 +1367,7 @@ out_free_interp:
 #endif
 
 	finalize_exec(bprm);
-	pr_alert("!!! %s %s %d, finalize_exec success, will call start_thread !!!\n", __func__, __FILE__, __LINE__);
+	//pr_alert("!!! %s %s %d, finalize_exec success, will call start_thread !!!\n", __func__, __FILE__, __LINE__);
 	START_THREAD(elf_ex, regs, elf_entry, bprm->p);
 	retval = 0;
 out:

@@ -1088,7 +1088,7 @@ int show_unhandled_signals = 1;
 static inline int
 access_error(unsigned long error_code, struct vm_area_struct *vma)
 {
-	pr_alert("!!! %s %s %d, error_code: 0x%lx\n", __FILE__, __func__, __LINE__, error_code);
+	//pr_alert("!!! %s %s %d, error_code: 0x%lx\n", __FILE__, __func__, __LINE__, error_code);
 
 	/* This is only called for the current mm, so: */
 	bool foreign = false;
@@ -1522,7 +1522,7 @@ static __always_inline void
 handle_page_fault(struct pt_regs *regs, unsigned long error_code,
 			      unsigned long address)
 {
-	pr_alert("!!! %s %s %d !!!\n", __FILE__, __func__, __LINE__);
+	//pr_alert("!!! %s %s %d !!!\n", __FILE__, __func__, __LINE__);
 	trace_page_fault_entries(regs, error_code, address);
 
 	if (unlikely(kmmio_fault(regs, address)))
@@ -1548,7 +1548,7 @@ handle_page_fault(struct pt_regs *regs, unsigned long error_code,
 
 DEFINE_IDTENTRY_RAW_ERRORCODE(exc_page_fault)
 {
-	pr_alert("!!! %s %s %d !!!\n", __FILE__, __func__, __LINE__);
+	//pr_alert("!!! %s %s %d !!!\n", __FILE__, __func__, __LINE__);
 	unsigned long address = read_cr2();
 	irqentry_state_t state;
 

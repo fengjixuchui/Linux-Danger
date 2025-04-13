@@ -750,7 +750,7 @@ int setup_arg_pages(struct linux_binprm *bprm,
 		    unsigned long stack_top,
 		    int executable_stack)
 {
-	pr_alert("!!! %s, %s, %d !!!\n", __func__, __FILE__, __LINE__);
+	//pr_alert("!!! %s, %s, %d !!!\n", __func__, __FILE__, __LINE__);
 	unsigned long ret;
 	unsigned long stack_shift;
 	struct mm_struct *mm = current->mm;

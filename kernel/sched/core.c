@@ -5367,7 +5367,7 @@ context_switch(struct rq *rq, struct task_struct *prev,
 
 		if (!prev->mm) {                        // from kernel
 			/* will mmdrop_lazy_tlb() in finish_task_switch(). */
-			pr_alert("!!! %s %s %d, Kernel -> User, now CR3 = 0x%llx !!!\n", __func__, __FILE__, __LINE__, __read_cr3());
+			// pr_alert("!!! %s %s %d, Kernel -> User, now CR3 = 0x%llx !!!\n", __func__, __FILE__, __LINE__, __read_cr3());
 			rq->prev_mm = prev->active_mm;
 			prev->active_mm = NULL;
 		}
@@ -5384,7 +5384,7 @@ context_switch(struct rq *rq, struct task_struct *prev,
 	if(next->mm && !prev->mm)
 	{
 		switch_to(prev, next, prev);
-		pr_alert("!!! %s %s %d, After switch_to, Still Live Here? !!!\n", __func__, __FILE__, __LINE__);
+		// pr_alert("!!! %s %s %d, After switch_to, Still Live Here? !!!\n", __func__, __FILE__, __LINE__);
 	}
 	else
 		switch_to(prev, next, prev);
