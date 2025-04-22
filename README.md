@@ -18,7 +18,11 @@ Headers
 
 [arch/x86/include/asm/ptrace.h](arch/x86/include/asm/ptrace.h) - Usermode/Kernelmode Partterns
 
+[arch/x86/include/asm/desc.h](arch/x86/include/asm/desc.h) - xDT Definitions
+
 Sources
+
+[init/main.c](init/main.c) - Kernel Entry Point
 
 [arch/x86/kernel/cpu/common.c](arch/x86/kernel/cpu/common.c) - Init some CPU Features
 
@@ -31,6 +35,8 @@ Sources
 [arch/x86/kernel/process_64.c](arch/x86/kernel/process_64.c) - Start Usermode Threads
 
 [arch/x86/entry/entry_64.S](arch/x86/entry/entry_64.S) - idt/syscall/sysret
+
+[arch/x86/kernel/idt.c](arch/x86/kernel/idt.c) - IDT Setup
 
 [arch/x86/mm/fault.c](arch/x86/mm/fault.c) - Page Fault Handler
 
@@ -78,10 +84,10 @@ qemu-system-x86_64 -kernel vmlinuz -initrd initrd.img -append "root=/dev/ram0 co
 
 # x64 Hacking Status
 
-- [ ] CR0 Write Protection Disable
+~~- [ ] CR0 Write Protection Disable~~
 - [x] Hack the user GDT to Ring 0
 - [x] Disable PTI
-- [x] Disable SMEP/SMAP
+~~- [x] Disable SMEP/SMAP~~
 - [x] Hack User Segment Descriptors to Ring 0
 - [x] Hack User Page Table Templates to Ring 0
 - [x] Disable Alternatives

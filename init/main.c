@@ -1450,8 +1450,7 @@ static int __ref kernel_init(void *unused)
 	 * Kernel mappings are now finalized - update the userspace page-table
 	 * to finalize PTI.
 	 */
-	//pti_finalize();
-	pr_info("!!! Good News, PTI is disabled !!!\n");
+	pti_finalize();
 
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
@@ -1459,12 +1458,6 @@ static int __ref kernel_init(void *unused)
 	rcu_end_inkernel_boot();
 
 	do_sysctl_args();
-
-	// let's hack cr0
-	// pr_crit("!!! Hacking CR0 to disable WP !!!\n");
-	// on_each_cpu(hack_cr0, NULL, 1);
-	// pr_crit("!!! Hacked CR0 to disable WP !!!\n");
-	pr_crit("!!! Bad Time to hack CR0 %s %s %d !!!\n", __FILE__, __func__, __LINE__);
 
 	if (ramdisk_execute_command) {
 		ret = run_init_process(ramdisk_execute_command);
@@ -1577,34 +1570,4 @@ static noinline void __init kernel_init_freeable(void)
 	 */
 
 	// integrity_load_keys();
-}
-
-
-void hack_cr0(void *unused)
-{
-	#ifdef __x86_64__
-		asm volatile(
-			".intel_syntax noprefix;"
-			"xor rax, rax;"
-			"mov rax, cr0;"
-			"and eax, 0xFFFEFFFF;"
-			"mov cr0, rax;"
-			".att_syntax;"
-			:
-			:
-			: "rax"
-		);
-	#else
-		asm volatile(
-			".intel_syntax noprefix;"
-			"xor eax, eax;"
-			"mov eax, cr0;"
-			"and eax, 0xFFFEFFFF;"
-			"mov cr0, eax;"
-			".att_syntax;"
-			:
-			:
-			: "eax"
-		);
-	#endif
 }

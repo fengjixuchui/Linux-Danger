@@ -885,8 +885,7 @@ void __init setup_arch(char **cmdline_p)
 	 * reserve_top(), so do this before touching the ioremap area.
 	 */
 	olpc_ofw_detect();
-
-	idt_setup_early_traps();
+	
 	early_cpu_init();
 	jump_label_init();
 	static_call_init();
@@ -1315,20 +1314,6 @@ void __init setup_arch(char **cmdline_p)
 #endif
 
 	unwind_init();
-
-	// let's hack CR0 to disable WP
-	asm volatile(
-		".intel_syntax noprefix;"
-		"xor rax, rax;"
-		"mov rax, cr0;"
-		//"and eax, 0xFFFEFFFF;"
-		"mov cr0, rax;"
-		".att_syntax;"
-		:
-		:
-		: "rax"
-	);
-	pr_crit("Bad Time to Hack CR0, %s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__);
 }
 
 #ifdef CONFIG_X86_32

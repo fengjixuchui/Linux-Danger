@@ -56,25 +56,6 @@
 static bool idt_setup_done __initdata;
 
 /*
- * Early traps running on the DEFAULT_STACK because the other interrupt
- * stacks work only after cpu_init().
- */
-static const __initconst struct idt_data early_idts[] = {
-	INTG(X86_TRAP_DB,		asm_exc_debug),
-	SYSG(X86_TRAP_BP,		asm_exc_int3),
-
-#ifdef CONFIG_X86_32
-	/*
-	 * Not possible on 64-bit. See idt_setup_early_pf() for details.
-	 */
-	INTG(X86_TRAP_PF,		asm_exc_page_fault),
-#endif
-#ifdef CONFIG_INTEL_TDX_GUEST
-	INTG(X86_TRAP_VE,		asm_exc_virtualization_exception),
-#endif
-};
-
-/*
  * The default IDT entries which are set up in trap_init() before
  * cpu_init() is invoked. Interrupt stacks cannot be used at that point and
  * the traps which use them are reinitialized with IST after cpu_init() has
@@ -232,20 +213,6 @@ static __init void set_intr_gate_hack(unsigned int n, const void *addr)
 	init_idt_data_DF_ist(&data, n, addr);
 
 	idt_setup_from_table(idt_table, &data, 1, false);
-}
-
-/**
- * idt_setup_early_traps - Initialize the idt table with early traps
- *
- * On X8664 these traps do not use interrupt stacks as they can't work
- * before cpu_init() is invoked and sets up TSS. The IST variants are
- * installed after that.
- */
-void __init idt_setup_early_traps(void)
-{
-	idt_setup_from_table(idt_table, early_idts, ARRAY_SIZE(early_idts),
-			     true);
-	load_idt(&idt_descr);
 }
 
 /**
