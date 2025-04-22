@@ -46,51 +46,6 @@
 .code64
 .section .entry.text, "ax"
 
-.macro replace_sysretq_to_iretq
-	// The fucking sysretq is not allow Ring0->Ring0, so replace it with iretq!
-	// BUT, the userland stack is not always available, so we need borrow a kernel stack
-	// we also need a free register to bakup original RSP, RDI is a good choice!
-	movq %rsp, %rdi // bakup original RSP -> RDI
-
-	swapgs // fucking swapgs again...for PER_CPU_VAR
-	movq	PER_CPU_VAR(pcpu_hot + X86_top_of_stack), %rsp //Oh, "top" here means highest address, is Actually the Deepest of the water-Well (Bottom)...
-	swapgs // now we back to the userland gs again...
-
-	// make a debug signal to QEMU
-	// push %dx
-	// push %ax
-	// push %bx
-	// mov $0x2333, %dx // destination port
-	// mov $0xE399, %ax // dump stack command
-	// mov $(6), %bx // dump length
-	// out %ax, %dx
-	// pop %bx
-	// pop %ax
-	// pop %dx
-
-	pushq $__USER_DS // ret SS
-	pushq %rdi // ret RSP
-	pushq %r11 // ret RFLAGS
-	pushq $__USER_CS // ret CS
-	pushq %rcx // ret RIP
-	// We're done!
-
-	// make a debug signal to QEMU
-	// push %dx
-	// push %ax
-	// push %bx
-	// mov $0x2333, %dx // destination port
-	// mov $0xE399, %ax // dump stack command
-	// mov $(6 + 40), %bx // dump length
-	// out %ax, %dx
-	// pop %bx
-	// pop %ax
-	// pop %dx
-
-	// Let's go!
-	iretq
-.endm
-
 /*
  * 64-bit SYSCALL instruction entry. Up to 6 arguments in registers.
  *
@@ -164,106 +119,30 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 
 	call	do_syscall_64		/* returns with IRQs disabled */
 
-	/*
-	 * Try to use SYSRET instead of IRET if we're returning to
-	 * a completely clean 64-bit userspace context.  If we're not,
-	 * go to the slow exit path.
-	 * In the Xen PV case we must use iret anyway.
-	 */
-
-	ALTERNATIVE "", "jmp	swapgs_restore_regs_and_return_to_usermode", \
-		X86_FEATURE_XENPV
-
-	movq	RCX(%rsp), %rcx
-	movq	RIP(%rsp), %r11
-
-	/*
-	 * On Intel CPUs, SYSRET with non-canonical RCX/RIP will #GP
-	 * in kernel space.  This essentially lets the user take over
-	 * the kernel, since userspace controls RSP.
-	 *
-	 * If width of "canonical tail" ever becomes variable, this will need
-	 * to be updated to remain correct on both old and new CPUs.
-	 *
-	 * Change top bits to match most significant bit (47th or 56th bit
-	 * depending on paging mode) in the address.
-	 */
-#ifdef CONFIG_X86_5LEVEL
-	ALTERNATIVE "shl $(64 - 48), %rcx; sar $(64 - 48), %rcx", \
-		"shl $(64 - 57), %rcx; sar $(64 - 57), %rcx", X86_FEATURE_LA57
-#else
-	shl	$(64 - (__VIRTUAL_MASK_SHIFT+1)), %rcx
-	sar	$(64 - (__VIRTUAL_MASK_SHIFT+1)), %rcx
-#endif
-
-	/* If this changed %rcx, it was not canonical */
-	cmpq	%rcx, %r11
-	jne	swapgs_restore_regs_and_return_to_usermode
-
-	cmpq	$__KERNEL_CS, CS(%rsp)		/* CS must match SYSRET */
-	jne	swapgs_restore_regs_and_return_to_usermode
-
-	movq	R11(%rsp), %r11
-
-	/*
-	 * SYSCALL clears RF when it saves RFLAGS in R11 and SYSRET cannot
-	 * restore RF properly. If the slowpath sets it for whatever reason, we
-	 * need to restore it correctly.
-	 *
-	 * SYSRET can restore TF, but unlike IRET, restoring TF results in a
-	 * trap from userspace immediately after SYSRET.  This would cause an
-	 * infinite loop whenever #DB happens with register state that satisfies
-	 * the opportunistic SYSRET conditions.  For example, single-stepping
-	 * this user code:
-	 *
-	 *           movq	$stuck_here, %rcx
-	 *           pushfq
-	 *           popq %r11
-	 *   stuck_here:
-	 *
-	 * would never get past 'stuck_here'.
-	 */
-	testq	$(X86_EFLAGS_RF|X86_EFLAGS_TF), %r11
-	jnz	swapgs_restore_regs_and_return_to_usermode
-
-	/* nothing to check for RSP */
-
-	cmpq	$__KERNEL_DS, SS(%rsp)		/* SS must match SYSRET */
-	jne	swapgs_restore_regs_and_return_to_usermode
-
-	/*
-	 * We win! This label is here just for ease of understanding
-	 * perf profiles. Nothing jumps here.
-	 */
-syscall_return_via_sysret:
-	IBRS_EXIT
+	// 終わりしよ！
 	POP_REGS pop_rdi=0
 
-	/*
-	 * Now all regs are restored except RSP and RDI.
-	 * Save old stack pointer and switch to trampoline stack.
-	 */
-	movq	%rsp, %rdi
-	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp0), %rsp
-	UNWIND_HINT_END_OF_STACK
+	// make a debug signal to QEMU
+	// push %dx
+	// push %ax
+	// push %bx
+	// mov $0x2333, %dx // destination port
+	// mov $0xE399, %ax // dump stack command
+	// mov $(6+56), %bx // dump length
+	// out %ax, %dx
+	// pop %bx
+	// pop %ax
+	// pop %dx
 
-	pushq	RSP-RDI(%rdi)	/* RSP */
-	pushq	(%rdi)		/* RDI */
-
-	/*
-	 * We are on the trampoline stack.  All regs except RDI are live.
-	 * We can do future final exit work right here.
-	 */
-	STACKLEAK_ERASE_NOCLOBBER
-
+	// The stack is now: user_RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
 	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
-
-	popq	%rdi
-	popq	%rsp
+	popq %rdi
+	add $8, %rsp // skip RAX
+	// ready to go!
 SYM_INNER_LABEL(entry_SYSRETQ_unsafe_stack, SYM_L_GLOBAL)
 	ANNOTATE_NOENDBR
 	swapgs
-	replace_sysretq_to_iretq
+	iretq
 SYM_INNER_LABEL(entry_SYSRETQ_end, SYM_L_GLOBAL)
 	ANNOTATE_NOENDBR
 	int3
