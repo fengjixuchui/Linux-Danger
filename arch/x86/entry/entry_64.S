@@ -177,9 +177,6 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	movq	RCX(%rsp), %rcx
 	movq	RIP(%rsp), %r11
 
-	cmpq	%rcx, %r11	/* SYSRET requires RCX == RIP */
-	jne	swapgs_restore_regs_and_return_to_usermode
-
 	/*
 	 * On Intel CPUs, SYSRET with non-canonical RCX/RIP will #GP
 	 * in kernel space.  This essentially lets the user take over
@@ -207,8 +204,6 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	jne	swapgs_restore_regs_and_return_to_usermode
 
 	movq	R11(%rsp), %r11
-	cmpq	%r11, EFLAGS(%rsp)		/* R11 == RFLAGS */
-	jne	swapgs_restore_regs_and_return_to_usermode
 
 	/*
 	 * SYSCALL clears RF when it saves RFLAGS in R11 and SYSRET cannot
