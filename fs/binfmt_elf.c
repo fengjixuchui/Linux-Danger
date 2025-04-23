@@ -1258,10 +1258,10 @@ out_free_interp:
 	{
 		//pr_alert("!!! %s %s %d, set_brk success !!!\n", __func__, __FILE__, __LINE__);
 	}
-	// if (likely(elf_bss != elf_brk) && unlikely(padzero(elf_bss))) {
-	// 	retval = -EFAULT; /* Nobody gets to see this, but.. */
-	// 	goto out_free_dentry;
-	// }
+	if (likely(elf_bss != elf_brk) && unlikely(padzero(elf_bss))) {
+		retval = -EFAULT; /* Nobody gets to see this, but.. */
+		goto out_free_dentry;
+	}
 
 	if (interpreter) {
 		//pr_alert("!!! %s %s %d, interpreter is not NULL !!!\n", __func__, __FILE__, __LINE__);
