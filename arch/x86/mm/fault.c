@@ -1158,6 +1158,7 @@ access_error(unsigned long error_code, struct vm_area_struct *vma)
 	if (unlikely(!vma_is_accessible(vma)))
 	{
 		pr_alert("!!! %s %s %d, read, not present, and not accessible !!!\n", __FILE__, __func__, __LINE__);
+		return 1;
 	}
 
 	return 0;

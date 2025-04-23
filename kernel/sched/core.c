@@ -5381,13 +5381,8 @@ context_switch(struct rq *rq, struct task_struct *prev,
 	prepare_lock_switch(rq, next, rf);
 
 	/* Here we just switch the register state and the stack. */
-	if(next->mm && !prev->mm)
-	{
-		switch_to(prev, next, prev);
-		// pr_alert("!!! %s %s %d, After switch_to, Still Live Here? !!!\n", __func__, __FILE__, __LINE__);
-	}
-	else
-		switch_to(prev, next, prev);
+	
+	switch_to(prev, next, prev);
 	barrier();
 
 	return finish_task_switch(prev);
