@@ -76,7 +76,7 @@ static __always_inline bool do_syscall_x32(struct pt_regs *regs, int nr)
 
 __visible noinstr void do_syscall_64(struct pt_regs *regs, int nr)
 {
-	pr_alert("!!! %s %s %d, orignal_nr = %d, rdi = 0x%llx, rsi = 0x%llx, rdx = 0x%llx !!!\n", __FILE__, __func__, __LINE__, nr, regs->di, regs->si, regs->dx);
+	//pr_alert("!!! %s %s %d, orignal_nr = %d, rdi = 0x%llx, rsi = 0x%llx, rdx = 0x%llx !!!\n", __FILE__, __func__, __LINE__, nr, regs->di, regs->si, regs->dx);
 	add_random_kstack_offset();
 	nr = syscall_enter_from_user_mode(regs, nr);
 
@@ -84,11 +84,11 @@ __visible noinstr void do_syscall_64(struct pt_regs *regs, int nr)
 
 	if (!do_syscall_x64(regs, nr) && !do_syscall_x32(regs, nr) && nr != -1) {
 		/* Invalid system call, but still a system call. */
-		pr_alert("!!! %s %s %d, nr = %d, INVALID SYSCALL !!!\n", __FILE__, __func__, __LINE__, nr);
+		//pr_alert("!!! %s %s %d, nr = %d, INVALID SYSCALL !!!\n", __FILE__, __func__, __LINE__, nr);
 		regs->ax = __x64_sys_ni_syscall(regs);
 	}
 
-	pr_alert("!!! %s %s %d, return 0x%llx !!!\n", __FILE__, __func__, __LINE__, regs->ax);
+	//pr_alert("!!! %s %s %d, return 0x%llx !!!\n", __FILE__, __func__, __LINE__, regs->ax);
 	instrumentation_end();
 	syscall_exit_to_user_mode(regs);
 }

@@ -156,7 +156,8 @@ static size_t initargs_offs;
 #endif
 
 static char *execute_command;
-static char *ramdisk_execute_command = "/mini_shell";
+//static char *ramdisk_execute_command = "/mini_shell";
+static char *ramdisk_execute_command = "/init";
 
 /*
  * Used to generate warnings if static_key manipulation functions are used

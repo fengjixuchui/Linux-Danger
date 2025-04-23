@@ -2,8 +2,8 @@
 VERSION = 6
 PATCHLEVEL = 6
 SUBLEVEL = 0
-EXTRAVERSION =
-NAME = Hurr durr I'ma ninja sloth
+EXTRAVERSION = -Danger
+NAME = Linux Kernel Danger
 
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"

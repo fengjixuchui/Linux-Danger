@@ -36,6 +36,8 @@ Sources
 
 [arch/x86/entry/entry_64.S](arch/x86/entry/entry_64.S) - idt/syscall/sysret
 
+[arch/x86/entry/common.c](arch/x86/entry/common.c) - syscall
+
 [arch/x86/kernel/idt.c](arch/x86/kernel/idt.c) - IDT Setup
 
 [arch/x86/mm/fault.c](arch/x86/mm/fault.c) - Page Fault Handler
@@ -93,7 +95,8 @@ qemu-system-x86_64 -kernel vmlinuz -initrd initrd.img -append "root=/dev/ram0 co
 ~~- [x] Disable Alternatives~~
 - [x] Adjust IST to FORCE Interrupt Stack always available (Most interrupts/exceptions will use #DF stack, then Manually carry stack back if from Kernel-Mode)
 - [x] Replace `sysretq` with `iretq`
-- [x] `/mini_shell` SUCCESSFULLY RUNS IN Ring 0!!!
+- [x] `/mini_shell` successfully run in Ring 0
+- [x] Much orignal ELFs can run in Ring 0 !!!
 
 ## Tested on
 
