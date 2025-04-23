@@ -1443,8 +1443,8 @@ static int __ref kernel_init(void *unused)
 	ftrace_free_init_mem();
 	kgdb_free_init_mem();
 	exit_boot_config();
-	//free_initmem();
-	//mark_readonly();
+	free_initmem();
+	mark_readonly();
 
 	/*
 	 * Kernel mappings are now finalized - update the userspace page-table
@@ -1569,5 +1569,5 @@ static noinline void __init kernel_init_freeable(void)
 	 * and default modules
 	 */
 
-	// integrity_load_keys();
+	integrity_load_keys();
 }

@@ -86,14 +86,14 @@ qemu-system-x86_64 -kernel vmlinuz -initrd initrd.img -append "root=/dev/ram0 co
 
 ~~- [ ] CR0 Write Protection Disable~~
 - [x] Hack the user GDT to Ring 0
-- [x] Disable PTI
+~~- [x] Disable PTI~~
 ~~- [x] Disable SMEP/SMAP~~
 - [x] Hack User Segment Descriptors to Ring 0
 - [x] Hack User Page Table Templates to Ring 0
-- [x] Disable Alternatives
+~~- [x] Disable Alternatives~~
 - [x] Adjust IST to FORCE Interrupt Stack always available (Most interrupts/exceptions will use #DF stack, then Manually carry stack back if from Kernel-Mode)
 - [x] Replace `sysretq` with `iretq`
-- [x] `/mini_shell` SUCCESSFULLY RUNS IN Ring0!!!
+- [x] `/mini_shell` SUCCESSFULLY RUNS IN Ring 0!!!
 
 ## Tested on
 

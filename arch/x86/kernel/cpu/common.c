@@ -2400,8 +2400,7 @@ void __init arch_cpu_finalize_init(void)
 	fpu__init_system();
 	fpu__init_cpu();
 
-	//alternative_instructions();
-	pr_alert("!!! %s %s %d, Hack to Disable alternative_instructions !!!\n", __FILE__, __func__, __LINE__);
+	alternative_instructions();
 
 	if (IS_ENABLED(CONFIG_X86_64)) {
 		/*

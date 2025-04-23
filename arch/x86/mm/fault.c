@@ -760,8 +760,9 @@ kernelmode_fixup_or_oops(struct pt_regs *regs, unsigned long error_code,
 	if (is_prefetch(regs, error_code, address))
 		return;
 	
-	pr_alert("%s %s %d", __FILE__, __func__, __LINE__);
-	page_fault_oops(regs, error_code, address);
+	pr_alert("!!! %s %s %d !!!", __FILE__, __func__, __LINE__);
+	//page_fault_oops(regs, error_code, address);
+	die("Oops", regs, error_code);
 }
 
 /*
@@ -1207,9 +1208,7 @@ do_kern_addr_fault(struct pt_regs *regs, unsigned long hw_error_code,
 	 * Before doing this on-demand faulting, ensure that the
 	 * fault is not any of the following:
 	 * 1. A fault on a PTE with a reserved bit set.
-	 * 2. A fault caused by a user-mode access.  (Do not demand-
-	 *    fault kernel memory due to user-mode accesses).
-	 * 3. A fault caused by a page-level protection violation.
+	 * 2. A fault caused by a page-level protection violation.
 	 *    (A demand fault would be on a non-present page which
 	 *     would have X86_PF_PROT==0).
 	 *
@@ -1219,7 +1218,7 @@ do_kern_addr_fault(struct pt_regs *regs, unsigned long hw_error_code,
 	 * exist as the vmalloc mappings don't need to be synchronized
 	 * there.
 	 */
-	if (!(hw_error_code & (X86_PF_RSVD | X86_PF_USER | X86_PF_PROT))) {
+	if (!(hw_error_code & (X86_PF_RSVD | X86_PF_PROT))) {
 		if (vmalloc_fault(address) >= 0)
 			return;
 	}
