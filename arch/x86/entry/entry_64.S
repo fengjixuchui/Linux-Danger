@@ -120,25 +120,10 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	call	do_syscall_64		/* returns with IRQs disabled */
 
 	// 終わりしよ！
-	POP_REGS pop_rdi=0
-
-	// make a debug signal to QEMU
-	// push %dx
-	// push %ax
-	// push %bx
-	// mov $0x2333, %dx // destination port
-	// mov $0xE399, %ax // dump stack command
-	// mov $(6+56), %bx // dump length
-	// out %ax, %dx
-	// pop %bx
-	// pop %ax
-	// pop %dx
-
-	// The stack is now: user_RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
-	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
-	popq %rdi
+	POP_REGS
+	// The stack is now: RAX, RIP, CS, EFLAGS, RSP, SS
 	add $8, %rsp // skip RAX
-	// ready to go!
+	// Go!
 SYM_INNER_LABEL(entry_SYSRETQ_unsafe_stack, SYM_L_GLOBAL)
 	ANNOTATE_NOENDBR
 	swapgs
@@ -665,18 +650,12 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	ALTERNATIVE "", "jmp xenpv_restore_regs_and_return_to_usermode", X86_FEATURE_XENPV
 #endif
 
-	POP_REGS pop_rdi=0
-
-	/*
-	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
-	 * Save old stack pointer and switch to trampoline stack.
-	 */
-
-	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
-	popq	%rdi
+	POP_REGS
+	// The stack is now: RAX, RIP, CS, EFLAGS, RSP, SS
 	add $8, %rsp // skip RAX
+	// Go!
 	swapgs
-	jmp	.Lnative_iret
+	iretq
 
 SYM_INNER_LABEL(restore_regs_and_return_to_kernel, SYM_L_GLOBAL)
 	POP_REGS
