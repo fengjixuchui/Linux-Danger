@@ -507,7 +507,7 @@ start_thread_common(struct pt_regs *regs, unsigned long new_ip,
 		    unsigned long new_sp,
 		    unsigned int _cs, unsigned int _ss, unsigned int _ds)
 {
-	pr_alert("!!! start_thread_common, target _cs: 0x%x, _ss: 0x%x, _ds: 0x%x, new_ip: %lx, new_sp: %lx !!!\n", _cs, _ss, _ds, new_ip, new_sp);
+	//pr_alert("!!! start_thread_common, target _cs: 0x%x, _ss: 0x%x, _ds: 0x%x, new_ip: %lx, new_sp: %lx !!!\n", _cs, _ss, _ds, new_ip, new_sp);
 	 
 	WARN_ON_ONCE(regs != current_pt_regs());
 

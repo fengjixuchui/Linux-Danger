@@ -809,7 +809,7 @@ static void synchronize_group_exit(struct task_struct *tsk, long code)
 void __noreturn do_exit(long code)
 {
 	//dump_stack();
-	pr_alert("%s %s %d, exit code %ld\n", __func__, __FILE__, __LINE__, code);
+	//pr_alert("%s %s %d, exit code %ld\n", __func__, __FILE__, __LINE__, code);
 	struct task_struct *tsk = current;
 	int group_dead;
 
