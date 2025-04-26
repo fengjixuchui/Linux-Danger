@@ -40,6 +40,8 @@ Sources
 
 [arch/x86/kernel/idt.c](arch/x86/kernel/idt.c) - IDT Setup
 
+[arch/x86/kernel/signal_64.c](arch/x86/kernel/signal_64.c) - Signal Handling
+
 [arch/x86/mm/fault.c](arch/x86/mm/fault.c) - Page Fault Handler
 
 [fs/exec.c](fs/exec.c) - Start ELF Binaries from Kernel
@@ -62,6 +64,11 @@ Then, disable ```CONFIG_SYSTEM_TRUSTED_KEYS``` and ```BTF```
     -> Certificates for signature checking
         -> Provide system-wide ring of trusted keys (SYSTEM_TRUSTED_KEYRING)
             -> Additional X.509 keys for default system keyring (SYSTEM_TRUSTED_KEYS [=])
+
+-> Enable loadable module support (MODULES [=y])
+    -> Module signature verification (MODULE_SIG [=y])
+        -> Require modules to be validly signed (MODULE_SIG_FORCE [=n])
+        -> Automatically sign all modules (MODULE_SIG_ALL [=n])
 
 -> Kernel hacking
     -> Compile-time checks and compiler options
