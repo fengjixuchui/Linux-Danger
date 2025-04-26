@@ -2,7 +2,7 @@
 VERSION = 6
 PATCHLEVEL = 6
 SUBLEVEL = 0
-EXTRAVERSION = -Danger
+EXTRAVERSION = -danger
 NAME = Linux Kernel Danger
 
 # *DOCUMENTATION*
