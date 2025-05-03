@@ -83,8 +83,6 @@ extern u8 skl_call_thunk_tail[];
 #define SKL_TMPL_SIZE \
 	((unsigned int)(skl_call_thunk_tail - skl_call_thunk_template))
 
-extern void error_entry(void);
-extern void xen_error_entry(void);
 extern void paranoid_entry(void);
 
 static inline bool within_coretext(const struct core_text *ct, void *addr)
@@ -121,11 +119,7 @@ static bool is_coretext(const struct core_text *ct, void *addr)
 
 static bool skip_addr(void *dest)
 {
-	if (dest == error_entry)
-		return true;
 	if (dest == paranoid_entry)
-		return true;
-	if (dest == xen_error_entry)
 		return true;
 	/* Does FILL_RSB... */
 	if (dest == __switch_to_asm)
