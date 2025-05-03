@@ -244,17 +244,8 @@ SYM_CODE_END(xen_error_entry)
  * @has_error_code:	Hardware pushed error code on stack
  */
 .macro idtentry_body cfunc has_error_code:req
-
-	/*
-	 * Call error_entry() and switch to the task stack if from userspace.
-	 *
-	 * When in XENPV, it is already in the task stack, and it can't fault
-	 * for native_iret() nor native_load_gs_index() since XENPV uses its
-	 * own pvops for IRET and load_gs_index().  And it doesn't need to
-	 * switch the CR3.  So it can skip invoking error_entry().
-	 */
-	ALTERNATIVE "call error_entry; movq %rax, %rsp", \
-		    "call xen_error_entry", X86_FEATURE_XENPV
+	// Don't call the fucking error_entry!
+	PUSH_AND_CLEAR_REGS save_ret=0 // Fucking save_ret eating the stack!
 
 	ENCODE_FRAME_POINTER
 	UNWIND_HINT_REGS
@@ -274,7 +265,7 @@ SYM_CODE_END(xen_error_entry)
 	jmp	error_return
 .endm
 
-.macro chk_revert_kernel_rsp has_error_code magicDbg
+.macro chk_swap_gs_rsp has_error_code magicDbg
 	.if \has_error_code == 1 // Exception
 		.if \magicDbg == 1
 			// make a debug signal to QEMU
@@ -290,11 +281,8 @@ SYM_CODE_END(xen_error_entry)
 			pop %dx
 		.endif
 		
-		cmp $__KERNEL_CS, 16(%rsp)
-		jne _keep_rsp_and_go_\@ //This is from user, error_entry will take care of the stack...
-		// is from kernel space, so we should leave TSS quickly
 		push %rax // backup rax
-		mov %rsp, %rax // set RAX to current stack
+		mov %rsp, %rax // let RAX hold current stack :)
 		/* RAX Layout
 		RAX+0: RAX we just backed up
 		RAX+8: error code
@@ -304,8 +292,17 @@ SYM_CODE_END(xen_error_entry)
 		RAX+40: orignal RSP
 		RAX+48: orignal SS
 		*/
+		cmp $__KERNEL_CS, 24(%rax)
+		je _act_ker\@
+		// 23333 section, we are from user space
+		swapgs
+		movq	PER_CPU_VAR(pcpu_hot + X86_top_of_stack), %rsp // let's go to user-kernel-stack
+		jmp _cp_stack\@
+		// 23333 section
+		_act_ker\@:
 		movq 40(%rax), %rsp // set rsp to the orignal
 		andq $~0xff, %rsp // align to 256 bytes
+		_cp_stack\@:
 		pushq 48(%rax) // push "orignal SS"
 		pushq 40(%rax) // push "orignal RSP"
 		pushq 32(%rax) // push "orignal RFLAGS"
@@ -342,11 +339,8 @@ SYM_CODE_END(xen_error_entry)
 			pop %dx
 		.endif
 
-		cmp $__KERNEL_CS, 8(%rsp)
-		jne _keep_rsp_and_go_\@ //This is from user, error_entry will take care of the TSS stack...
-		// is from kernel space, so we should leave TSS quickly
 		push %rax // backup rax
-		movq %rsp, %rax // set RAX to current stack
+		movq %rsp, %rax // let RAX hold current stack :)S
 		/* RAX Layout
 		RAX+0: RAX we just backed up
 		RAX+8: orignal RIP
@@ -355,8 +349,17 @@ SYM_CODE_END(xen_error_entry)
 		RAX+32: orignal RSP
 		RAX+40: orignal SS
 		*/
+		cmp $__KERNEL_CS, 16(%rax)
+		je _act_ker\@
+		// 23333 section, we are from user space
+		swapgs
+		movq	PER_CPU_VAR(pcpu_hot + X86_top_of_stack), %rsp // let's go to user-kernel-stack
+		jmp _cp_stack\@
+		// 23333 section
+		_act_ker\@:
 		movq 32(%rax), %rsp // set rsp to the orignal
 		andq $~0xff, %rsp // align to 256 bytes
+		_cp_stack\@:
 		pushq 40(%rax) // push "orignal SS"
 		pushq 32(%rax) // push "orignal RSP"
 		pushq 24(%rax) // push "orignal RFLAGS"
@@ -378,7 +381,6 @@ SYM_CODE_END(xen_error_entry)
 			pop %dx
 		.endif
 	.endif
-	_keep_rsp_and_go_\@:
 .endm
 
 /**
@@ -394,7 +396,7 @@ SYM_CODE_END(xen_error_entry)
 .macro idtentry vector asmsym cfunc has_error_code:req
 SYM_CODE_START(\asmsym)
 	// we should revert to the original RSP if interrupt/excption is from kernel space
-	chk_revert_kernel_rsp \has_error_code 0
+	chk_swap_gs_rsp \has_error_code 0
 
 	.if \vector == X86_TRAP_BP
 		/* #BP advances %rip to the next instruction */
@@ -472,7 +474,7 @@ SYM_CODE_END(\asmsym)
 .macro idtentry_mce_db vector asmsym cfunc
 SYM_CODE_START(\asmsym)
 	// we should revert to the original RSP if interrupt/excption is from kernel space
-	chk_revert_kernel_rsp 0 1
+	chk_swap_gs_rsp 0 1
 	
 	UNWIND_HINT_IRET_ENTRY
 	ENDBR
@@ -532,7 +534,7 @@ SYM_CODE_END(\asmsym)
 .macro idtentry_vc vector asmsym cfunc
 SYM_CODE_START(\asmsym)
 	// we should revert to the original RSP if interrupt/excption is from kernel space
-	chk_revert_kernel_rsp 1 1
+	chk_swap_gs_rsp 1 1
 
 	UNWIND_HINT_IRET_ENTRY
 	ENDBR
