@@ -1345,11 +1345,17 @@ SYSCALL_DEFINE2(clock_getres_time32, clockid_t, which_clock,
 static int common_nsleep(const clockid_t which_clock, int flags,
 			 const struct timespec64 *rqtp)
 {
-	ktime_t texp = timespec64_to_ktime(*rqtp);
-
-	return hrtimer_nanosleep(texp, flags & TIMER_ABSTIME ?
-				 HRTIMER_MODE_ABS : HRTIMER_MODE_REL,
-				 which_clock);
+	ktime_t start_time = ktime_get();
+	ktime_t sleep_req = rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec;
+	while(!signal_pending(current))
+	{
+		asm volatile("hlt");
+		if((ktime_get() - start_time) >= sleep_req)
+		{
+			return 0; //終わり
+		}
+	}
+	return -1;
 }
 
 /*
@@ -1360,14 +1366,19 @@ static int common_nsleep(const clockid_t which_clock, int flags,
 static int common_nsleep_timens(const clockid_t which_clock, int flags,
 				const struct timespec64 *rqtp)
 {
-	ktime_t texp = timespec64_to_ktime(*rqtp);
-
+	ktime_t start_time = ktime_get();
+	ktime_t sleep_req = rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec;
 	if (flags & TIMER_ABSTIME)
-		texp = timens_ktime_to_host(which_clock, texp);
-
-	return hrtimer_nanosleep(texp, flags & TIMER_ABSTIME ?
-				 HRTIMER_MODE_ABS : HRTIMER_MODE_REL,
-				 which_clock);
+		sleep_req = timens_ktime_to_host(which_clock, sleep_req);
+	while(!signal_pending(current))
+	{
+		asm volatile("hlt");
+		if((ktime_get() - start_time) >= sleep_req)
+		{
+			return 0; //終わり
+		}
+	}
+	return -1;
 }
 
 SYSCALL_DEFINE4(clock_nanosleep, const clockid_t, which_clock, int, flags,

@@ -503,37 +503,6 @@ EXPORT_SYMBOL_GPL(alarm_forward_now);
 
 #ifdef CONFIG_POSIX_TIMERS
 
-static void alarmtimer_freezerset(ktime_t absexp, enum alarmtimer_type type)
-{
-	struct alarm_base *base;
-	unsigned long flags;
-	ktime_t delta;
-
-	switch(type) {
-	case ALARM_REALTIME:
-		base = &alarm_bases[ALARM_REALTIME];
-		type = ALARM_REALTIME_FREEZER;
-		break;
-	case ALARM_BOOTTIME:
-		base = &alarm_bases[ALARM_BOOTTIME];
-		type = ALARM_BOOTTIME_FREEZER;
-		break;
-	default:
-		WARN_ONCE(1, "Invalid alarm type: %d\n", type);
-		return;
-	}
-
-	delta = ktime_sub(absexp, base->get_ktime());
-
-	spin_lock_irqsave(&freezer_delta_lock, flags);
-	if (!freezer_delta || (delta < freezer_delta)) {
-		freezer_delta = delta;
-		freezer_expires = absexp;
-		freezer_alarmtype = type;
-	}
-	spin_unlock_irqrestore(&freezer_delta_lock, flags);
-}
-
 /**
  * clock2alarm - helper that converts from clockid to alarmtypes
  * @clockid: clockid.
@@ -767,41 +736,17 @@ static enum alarmtimer_restart alarmtimer_nsleep_wakeup(struct alarm *alarm,
  *
  * Sets the alarm timer and sleeps until it is fired or interrupted.
  */
-static int alarmtimer_do_nsleep(struct alarm *alarm, ktime_t absexp,
+static int alarmtimer_do_nsleep(struct alarm *alarm, ktime_t sleep_req,
 				enum alarmtimer_type type)
 {
-	struct restart_block *restart;
-	alarm->data = (void *)current;
-	do {
-		set_current_state(TASK_INTERRUPTIBLE);
-		alarm_start(alarm, absexp);
-		if (likely(alarm->data))
-			schedule();
-
-		alarm_cancel(alarm);
-	} while (alarm->data && !signal_pending(current));
-
-	__set_current_state(TASK_RUNNING);
-
-	destroy_hrtimer_on_stack(&alarm->timer);
-
-	if (!alarm->data)
-		return 0;
-
-	if (freezing(current))
-		alarmtimer_freezerset(absexp, type);
-	restart = &current->restart_block;
-	if (restart->nanosleep.type != TT_NONE) {
-		struct timespec64 rmt;
-		ktime_t rem;
-
-		rem = ktime_sub(absexp, alarm_bases[type].get_ktime());
-
-		if (rem <= 0)
-			return 0;
-		rmt = ktime_to_timespec64(rem);
-
-		return nanosleep_copyout(restart, &rmt);
+	ktime_t start_time = ktime_get();
+	while(!signal_pending(current))
+	{
+		asm volatile("hlt");
+		if((ktime_get() - start_time) >= sleep_req)
+		{
+			return 0; //終わり
+		}
 	}
 	return -ERESTART_RESTARTBLOCK;
 }

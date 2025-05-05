@@ -2016,106 +2016,6 @@ void hrtimer_init_sleeper(struct hrtimer_sleeper *sl, clockid_t clock_id,
 }
 EXPORT_SYMBOL_GPL(hrtimer_init_sleeper);
 
-int nanosleep_copyout(struct restart_block *restart, struct timespec64 *ts)
-{
-	switch(restart->nanosleep.type) {
-#ifdef CONFIG_COMPAT_32BIT_TIME
-	case TT_COMPAT:
-		if (put_old_timespec32(ts, restart->nanosleep.compat_rmtp))
-			return -EFAULT;
-		break;
-#endif
-	case TT_NATIVE:
-		if (put_timespec64(ts, restart->nanosleep.rmtp))
-			return -EFAULT;
-		break;
-	default:
-		BUG();
-	}
-	return -ERESTART_RESTARTBLOCK;
-}
-
-static int __sched do_nanosleep(struct hrtimer_sleeper *t, enum hrtimer_mode mode)
-{
-	struct restart_block *restart;
-
-	do {
-		set_current_state(TASK_INTERRUPTIBLE|TASK_FREEZABLE);
-		hrtimer_sleeper_start_expires(t, mode);
-
-		if (likely(t->task))
-			schedule();
-
-		hrtimer_cancel(&t->timer);
-		mode = HRTIMER_MODE_ABS;
-
-	} while (t->task && !signal_pending(current));
-
-	__set_current_state(TASK_RUNNING);
-
-	if (!t->task)
-		return 0;
-
-	restart = &current->restart_block;
-	if (restart->nanosleep.type != TT_NONE) {
-		ktime_t rem = hrtimer_expires_remaining(&t->timer);
-		struct timespec64 rmt;
-
-		if (rem <= 0)
-			return 0;
-		rmt = ktime_to_timespec64(rem);
-
-		return nanosleep_copyout(restart, &rmt);
-	}
-	return -ERESTART_RESTARTBLOCK;
-}
-
-static long __sched hrtimer_nanosleep_restart(struct restart_block *restart)
-{
-	struct hrtimer_sleeper t;
-	int ret;
-
-	hrtimer_init_sleeper_on_stack(&t, restart->nanosleep.clockid,
-				      HRTIMER_MODE_ABS);
-	hrtimer_set_expires_tv64(&t.timer, restart->nanosleep.expires);
-	ret = do_nanosleep(&t, HRTIMER_MODE_ABS);
-	destroy_hrtimer_on_stack(&t.timer);
-	return ret;
-}
-
-long hrtimer_nanosleep(ktime_t rqtp, const enum hrtimer_mode mode,
-		       const clockid_t clockid)
-{
-	struct restart_block *restart;
-	struct hrtimer_sleeper t;
-	int ret = 0;
-	u64 slack;
-
-	slack = current->timer_slack_ns;
-	if (rt_task(current))
-		slack = 0;
-
-	hrtimer_init_sleeper_on_stack(&t, clockid, mode);
-	hrtimer_set_expires_range_ns(&t.timer, rqtp, slack);
-	ret = do_nanosleep(&t, mode);
-	if (ret != -ERESTART_RESTARTBLOCK)
-		goto out;
-
-	/* Absolute timers do not update the rmtp value and restart: */
-	if (mode == HRTIMER_MODE_ABS) {
-		ret = -ERESTARTNOHAND;
-		goto out;
-	}
-
-	restart = &current->restart_block;
-	restart->nanosleep.clockid = t.timer.base->clockid;
-	restart->nanosleep.expires = hrtimer_get_expires_tv64(&t.timer);
-	set_restart_fn(restart, hrtimer_nanosleep_restart);
-out:
-	destroy_hrtimer_on_stack(&t.timer);
-	return ret;
-}
-
 #ifdef CONFIG_64BIT
 
 SYSCALL_DEFINE2(nanosleep, struct __kernel_timespec __user *, rqtp,
@@ -2151,19 +2051,27 @@ SYSCALL_DEFINE2(nanosleep, struct __kernel_timespec __user *, rqtp,
 SYSCALL_DEFINE2(nanosleep_time32, struct old_timespec32 __user *, rqtp,
 		       struct old_timespec32 __user *, rmtp)
 {
-	struct timespec64 tu;
+	ktime_t start_time = ktime_get();
 
+	struct timespec64 tu;
 	if (get_old_timespec32(&tu, rqtp))
 		return -EFAULT;
-
 	if (!timespec64_valid(&tu))
 		return -EINVAL;
+	ktime_t sleep_req = tu.tv_sec * 1000000000ULL + tu.tv_nsec; // get 本物
+	
+	while(!signal_pending(current))
+	{
+		asm volatile("hlt");
+		if((ktime_get() - start_time) >= sleep_req)
+		{
+			return 0; //終わり
+		}
+	}
 
-	current->restart_block.fn = do_no_restart_syscall;
-	current->restart_block.nanosleep.type = rmtp ? TT_COMPAT : TT_NONE;
-	current->restart_block.nanosleep.compat_rmtp = rmtp;
-	return hrtimer_nanosleep(timespec64_to_ktime(tu), HRTIMER_MODE_REL,
-				 CLOCK_MONOTONIC);
+	struct old_timespec32 shit_buf = { .tv_sec = 0, .tv_nsec = sleep_req - (ktime_get() - start_time) };
+	copy_to_user(rmtp, &shit_buf, sizeof(shit_buf)); // Fucking Call-Convention!
+	return -ERESTART_RESTARTBLOCK;
 }
 #endif
 

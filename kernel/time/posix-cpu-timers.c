@@ -1501,90 +1501,17 @@ void set_process_cpu_timer(struct task_struct *tsk, unsigned int clkid,
 static int do_cpu_nanosleep(const clockid_t which_clock, int flags,
 			    const struct timespec64 *rqtp)
 {
-	struct itimerspec64 it;
-	struct k_itimer timer;
-	u64 expires;
-	int error;
-
-	/*
-	 * Set up a temporary timer and then wait for it to go off.
-	 */
-	memset(&timer, 0, sizeof timer);
-	spin_lock_init(&timer.it_lock);
-	timer.it_clock = which_clock;
-	timer.it_overrun = -1;
-	error = posix_cpu_timer_create(&timer);
-	timer.it_process = current;
-
-	if (!error) {
-		static struct itimerspec64 zero_it;
-		struct restart_block *restart;
-
-		memset(&it, 0, sizeof(it));
-		it.it_value = *rqtp;
-
-		spin_lock_irq(&timer.it_lock);
-		error = posix_cpu_timer_set(&timer, flags, &it, NULL);
-		if (error) {
-			spin_unlock_irq(&timer.it_lock);
-			return error;
+	ktime_t start_time = ktime_get();
+	ktime_t sleep_req = rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec;
+	while(!signal_pending(current))
+	{
+		asm volatile("hlt");
+		if((ktime_get() - start_time) >= sleep_req)
+		{
+			return 0; //終わり
 		}
-
-		while (!signal_pending(current)) {
-			if (!cpu_timer_getexpires(&timer.it.cpu)) {
-				/*
-				 * Our timer fired and was reset, below
-				 * deletion can not fail.
-				 */
-				posix_cpu_timer_del(&timer);
-				spin_unlock_irq(&timer.it_lock);
-				return 0;
-			}
-
-			/*
-			 * Block until cpu_timer_fire (or a signal) wakes us.
-			 */
-			__set_current_state(TASK_INTERRUPTIBLE);
-			spin_unlock_irq(&timer.it_lock);
-			schedule();
-			spin_lock_irq(&timer.it_lock);
-		}
-
-		/*
-		 * We were interrupted by a signal.
-		 */
-		expires = cpu_timer_getexpires(&timer.it.cpu);
-		error = posix_cpu_timer_set(&timer, 0, &zero_it, &it);
-		if (!error) {
-			/* Timer is now unarmed, deletion can not fail. */
-			posix_cpu_timer_del(&timer);
-		} else {
-			while (error == TIMER_RETRY) {
-				posix_cpu_timer_wait_running_nsleep(&timer);
-				error = posix_cpu_timer_del(&timer);
-			}
-		}
-
-		spin_unlock_irq(&timer.it_lock);
-
-		if ((it.it_value.tv_sec | it.it_value.tv_nsec) == 0) {
-			/*
-			 * It actually did fire already.
-			 */
-			return 0;
-		}
-
-		error = -ERESTART_RESTARTBLOCK;
-		/*
-		 * Report back to the user the time still remaining.
-		 */
-		restart = &current->restart_block;
-		restart->nanosleep.expires = expires;
-		if (restart->nanosleep.type != TT_NONE)
-			error = nanosleep_copyout(restart, &it.it_value);
 	}
-
-	return error;
+	return -1;
 }
 
 static long posix_cpu_nsleep_restart(struct restart_block *restart_block);
