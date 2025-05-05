@@ -48,6 +48,8 @@ Sources
 
 [kernel/sched/core.c](kernel/sched/core.c) - Scheduler
 
+[kernel/time/hrtimer.c](kernel/time/hrtimer.c) - syscall_nanosleep
+
 # Build & Run on Ubuntu 24.04
 
 ```
@@ -104,6 +106,7 @@ qemu-system-x86_64 -kernel vmlinuz -initrd initrd.img -append "root=/dev/ram0 co
 - [x] Replace `sysretq` with `iretq`
 - [x] `/mini_shell` successfully run in Ring 0
 - [x] Much orignal ELFs can run in Ring 0 !!!
+- [x] Hack `nanosleep` to save energy
 
 ## Tested on
 

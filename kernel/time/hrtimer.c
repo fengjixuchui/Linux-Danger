@@ -2121,19 +2121,27 @@ out:
 SYSCALL_DEFINE2(nanosleep, struct __kernel_timespec __user *, rqtp,
 		struct __kernel_timespec __user *, rmtp)
 {
-	struct timespec64 tu;
+	ktime_t start_time = ktime_get();
 
+	struct timespec64 tu;
 	if (get_timespec64(&tu, rqtp))
 		return -EFAULT;
-
 	if (!timespec64_valid(&tu))
 		return -EINVAL;
+	ktime_t sleep_req = tu.tv_sec * 1000000000ULL + tu.tv_nsec; // get 本物
+	
+	while(!signal_pending(current))
+	{
+		asm volatile("hlt");
+		if((ktime_get() - start_time) >= sleep_req)
+		{
+			return 0; //終わり
+		}
+	}
 
-	current->restart_block.fn = do_no_restart_syscall;
-	current->restart_block.nanosleep.type = rmtp ? TT_NATIVE : TT_NONE;
-	current->restart_block.nanosleep.rmtp = rmtp;
-	return hrtimer_nanosleep(timespec64_to_ktime(tu), HRTIMER_MODE_REL,
-				 CLOCK_MONOTONIC);
+	tu.tv_sec = 0; tu.tv_nsec = sleep_req - (ktime_get() - start_time); // shit...
+	copy_to_user(rmtp, &tu, sizeof(tu)); // Fucking Call-Convention!
+	return -ERESTART_RESTARTBLOCK;
 }
 
 #endif
