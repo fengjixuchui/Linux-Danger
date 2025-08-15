@@ -1349,7 +1349,7 @@ static int common_nsleep(const clockid_t which_clock, int flags,
 	ktime_t sleep_req = rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec;
 	while(!signal_pending(current))
 	{
-		asm volatile("hlt");
+		HLT;
 		if((ktime_get() - start_time) >= sleep_req)
 		{
 			return 0; //終わり
@@ -1372,7 +1372,7 @@ static int common_nsleep_timens(const clockid_t which_clock, int flags,
 		sleep_req = timens_ktime_to_host(which_clock, sleep_req);
 	while(!signal_pending(current))
 	{
-		asm volatile("hlt");
+		HLT;
 		if((ktime_get() - start_time) >= sleep_req)
 		{
 			return 0; //終わり

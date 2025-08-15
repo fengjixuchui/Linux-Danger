@@ -742,7 +742,7 @@ static int alarmtimer_do_nsleep(struct alarm *alarm, ktime_t sleep_req,
 	ktime_t start_time = ktime_get();
 	while(!signal_pending(current))
 	{
-		asm volatile("hlt");
+		HLT;
 		if((ktime_get() - start_time) >= sleep_req)
 		{
 			return 0; //終わり

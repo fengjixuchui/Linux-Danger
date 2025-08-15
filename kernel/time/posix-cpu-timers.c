@@ -1505,7 +1505,7 @@ static int do_cpu_nanosleep(const clockid_t which_clock, int flags,
 	ktime_t sleep_req = rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec;
 	while(!signal_pending(current))
 	{
-		asm volatile("hlt");
+		HLT;
 		if((ktime_get() - start_time) >= sleep_req)
 		{
 			return 0; //終わり

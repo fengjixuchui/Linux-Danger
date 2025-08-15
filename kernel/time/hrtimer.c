@@ -2032,7 +2032,7 @@ SYSCALL_DEFINE2(nanosleep, struct __kernel_timespec __user *, rqtp,
 	
 	while(!signal_pending(current))
 	{
-		asm volatile("hlt");
+		HLT;
 		if((ktime_get() - start_time) >= sleep_req)
 		{
 			return 0; //終わり
@@ -2062,7 +2062,7 @@ SYSCALL_DEFINE2(nanosleep_time32, struct old_timespec32 __user *, rqtp,
 	
 	while(!signal_pending(current))
 	{
-		asm volatile("hlt");
+		HLT;
 		if((ktime_get() - start_time) >= sleep_req)
 		{
 			return 0; //終わり

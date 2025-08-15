@@ -23,6 +23,12 @@
 #include <asm/siginfo.h>
 #include <asm/signal.h>
 
+#ifdef CONFIG_X86
+#define HLT asm volatile("hlt")
+#elif defined(CONFIG_ARM) || defined(CONFIG_ARM64)
+#define HLT asm volatile("wfi")
+#endif
+
 #ifdef CONFIG_ARCH_HAS_SYSCALL_WRAPPER
 /*
  * It may be useful for an architecture to override the definitions of the
