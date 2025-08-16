@@ -1976,7 +1976,7 @@ DEFINE_IDTENTRY_VC_USER(exc_vmm_communication)
 	 * Handle #DB before calling into !noinstr code to avoid recursive #DB.
 	 */
 	if (vc_is_db(error_code)) {
-		noist_exc_debug(regs);
+		exc_debug(regs);
 		return;
 	}
 

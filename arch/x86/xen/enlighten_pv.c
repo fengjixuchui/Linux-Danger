@@ -649,10 +649,7 @@ DEFINE_IDTENTRY_RAW(xenpv_exc_debug)
 	 * There's no IST on Xen PV, but we still need to dispatch
 	 * to the correct handler.
 	 */
-	if (user_mode(regs))
-		noist_exc_debug(regs);
-	else
-		exc_debug(regs);
+	exc_debug(regs);
 }
 
 DEFINE_IDTENTRY_RAW(exc_xen_unknown_trap)
@@ -671,10 +668,7 @@ DEFINE_IDTENTRY_RAW(xenpv_exc_machine_check)
 	 * There's no IST on Xen PV, but we still need to dispatch
 	 * to the correct handler.
 	 */
-	if (user_mode(regs))
-		noist_exc_machine_check(regs);
-	else
-		exc_machine_check(regs);
+	exc_machine_check(regs);
 }
 #endif
 
