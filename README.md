@@ -120,3 +120,8 @@ qemu-system-x86_64 -kernel vmlinuz -initrd initrd.img -append "root=/dev/ram0 co
 - [x] [QEMU_Danger_x86](https://github.com/UEFI-code/QEMU_Danger_x86), `qemu-system-x86_64 -kernel vmlinuz -initrd initrd.img -append "root=/dev/ram0 console=ttyS0" -m 512M -serial stdio`, `/mini_shell` is a usermode ELF running in Ring0
 - [x] Physical PC, Intel Core 2 Duo
 - [ ] Hyper-V, Not Working...Maybe Hyper-V ignored IST at non-#DF conditions?
+
+## Acknowledgements
+
+- `Microsoft Student Ambassadors` program of Azure 150$ credits (to build the kernel)
+- The computation was carried out using the computer resource offered under the category of ***包括契約制度*** by Research Institute for Information Technology, Kyushu University. (to build the kernel)
