@@ -113,7 +113,6 @@ __visible noinstr void func(struct pt_regs *regs)
 #define DEFINE_IDTENTRY_RAW_ERRORCODE(func)				\
 __visible noinstr void func(struct pt_regs *regs, unsigned long error_code)
 
-
 /**
  * DEFINE_IDTENTRY_IRQ - Emit code for device interrupt IDT entry points
  * @func:	Function name of the entry point
@@ -217,19 +216,6 @@ static __always_inline void __##func(struct pt_regs *regs)
 #ifdef CONFIG_X86_64
 
 /**
- * DECLARE_IDTENTRY_VC - Declare functions for the VC entry point
- * @vector:	Vector number (ignored for C)
- * @func:	Function name of the entry point
- *
- * Maps to DECLARE_IDTENTRY_RAW_ERRORCODE, but declares also the
- * safe_stack C handler.
- */
-#define DECLARE_IDTENTRY_VC(vector, func)				\
-	DECLARE_IDTENTRY_RAW_ERRORCODE(vector, func);			\
-	__visible noinstr void kernel_##func(struct pt_regs *regs, unsigned long error_code);	\
-	__visible noinstr void   user_##func(struct pt_regs *regs, unsigned long error_code)
-
-/**
  * DECLARE_IDTENTRY_DF - Declare functions for double fault
  * @vector:	Vector number (ignored for C)
  * @func:	Function name of the entry point
@@ -247,26 +233,6 @@ static __always_inline void __##func(struct pt_regs *regs)
  */
 #define DEFINE_IDTENTRY_DF(func)					\
 	DEFINE_IDTENTRY_RAW_ERRORCODE(func)
-
-/**
- * DEFINE_IDTENTRY_VC_KERNEL - Emit code for VMM communication handler
-			       when raised from kernel mode
- * @func:	Function name of the entry point
- *
- * Maps to DEFINE_IDTENTRY_RAW_ERRORCODE
- */
-#define DEFINE_IDTENTRY_VC_KERNEL(func)				\
-	DEFINE_IDTENTRY_RAW_ERRORCODE(kernel_##func)
-
-/**
- * DEFINE_IDTENTRY_VC_USER - Emit code for VMM communication handler
-			     when raised from user mode
- * @func:	Function name of the entry point
- *
- * Maps to DEFINE_IDTENTRY_RAW_ERRORCODE
- */
-#define DEFINE_IDTENTRY_VC_USER(func)				\
-	DEFINE_IDTENTRY_RAW_ERRORCODE(user_##func)
 
 #else	/* CONFIG_X86_64 */
 
@@ -328,9 +294,6 @@ __visible noinstr void func(struct pt_regs *regs,			\
 
 # define DECLARE_IDTENTRY_XENCB(vector, func)				\
 	DECLARE_IDTENTRY(vector, func)
-
-# define DECLARE_IDTENTRY_VC(vector, func)				\
-	idtentry_vc vector asm_##func func
 
 #else
 
@@ -474,7 +437,7 @@ DECLARE_IDTENTRY_ERRORCODE(X86_TRAP_CP,	exc_control_protection);
 
 /* #VC */
 #ifdef CONFIG_AMD_MEM_ENCRYPT
-DECLARE_IDTENTRY_VC(X86_TRAP_VC,	exc_vmm_communication);
+DECLARE_IDTENTRY_ERRORCODE(X86_TRAP_VC,	exc_vmm_communication);
 #endif
 
 #ifdef CONFIG_XEN_PV
