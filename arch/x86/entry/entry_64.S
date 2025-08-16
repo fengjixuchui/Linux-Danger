@@ -424,28 +424,6 @@ _ASM_NOKPROBE(\asmsym)
 SYM_CODE_END(\asmsym)
 .endm
 
-/*
- * Interrupt entry/exit.
- *
- + The interrupt stubs push (vector) onto the stack, which is the error_code
- * position of idtentry exceptions, and jump to one of the two idtentry points
- * (common/spurious).
- *
- * common_interrupt is a hotpath, align it to a cache line
- */
-.macro idtentry_irq vector cfunc
-	.p2align CONFIG_X86_L1_CACHE_SHIFT
-	idtentry \vector asm_\cfunc \cfunc has_error_code=1
-.endm
-
-/*
- * System vectors which invoke their handlers directly and are not
- * going through the regular common device interrupt handling code.
- */
-.macro idtentry_sysvec vector cfunc
-	idtentry \vector asm_\cfunc \cfunc has_error_code=0
-.endm
-
 #ifdef CONFIG_AMD_MEM_ENCRYPT
 /**
  * idtentry_vc - Macro to generate entry stub for #VC
