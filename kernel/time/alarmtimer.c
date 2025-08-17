@@ -739,15 +739,9 @@ static enum alarmtimer_restart alarmtimer_nsleep_wakeup(struct alarm *alarm,
 static int alarmtimer_do_nsleep(struct alarm *alarm, ktime_t sleep_req,
 				enum alarmtimer_type type)
 {
-	ktime_t start_time = ktime_get();
-	while(!signal_pending(current))
-	{
-		HLT;
-		if((ktime_get() - start_time) >= sleep_req)
-		{
-			return 0; //終わり
-		}
-	}
+	ktime_t sleep_res = hlt_sleep(sleep_req);
+	if (sleep_res == 0)
+		return 0;
 	return -ERESTART_RESTARTBLOCK;
 }
 

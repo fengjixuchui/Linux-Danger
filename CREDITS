@@ -11,7 +11,9 @@
 
 N: SuperHacker UEFI
 E: zhuoshizhang@hotmail.com
-D: Hiroshima University
+D: Hack CS->0x30
+D: Replace hrtimer->HLT
+D: Clean bullshit in entry_64.S & idtentry.h
 
 N: Matt Mackal
 E: mpm@selenic.com

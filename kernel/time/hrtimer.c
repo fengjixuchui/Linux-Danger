@@ -3,7 +3,7 @@
  *  Copyright(C) 2005-2006, Thomas Gleixner <tglx@linutronix.de>
  *  Copyright(C) 2005-2007, Red Hat, Inc., Ingo Molnar
  *  Copyright(C) 2006-2007  Timesys Corp., Thomas Gleixner
- *
+ *  Copyright(C) 2025-  SuperHacker UEFI
  *  High-resolution kernel timers
  *
  *  In contrast to the low-resolution timeout API, aka timer wheel,
@@ -20,6 +20,9 @@
  *
  *	George Anzinger, Andrew Morton, Steven Rostedt, Roman Zippel
  *	et. al.
+ *
+ *	SuperHacker UEFI delete plenty of bullshit code, and using HLT instead
+ *
  */
 
 #include <linux/cpu.h>
@@ -2016,30 +2019,49 @@ void hrtimer_init_sleeper(struct hrtimer_sleeper *sl, clockid_t clock_id,
 }
 EXPORT_SYMBOL_GPL(hrtimer_init_sleeper);
 
+ktime_t hlt_sleep(ktime_t sleep_req)
+{
+	ktime_t start_time = ktime_get();
+
+	// bakup sched parameters
+	unsigned int policy_bak = current->policy;
+	int prio_bak = current->prio;
+	int static_prio_bak = current->static_prio;
+	// set sched parameters
+	current->policy = SCHED_IDLE;
+	current->prio = MAX_PRIO - 1;
+	current->static_prio = MAX_PRIO - 1;
+
+	ktime_t remaining_time = 233;
+	while(!signal_pending(current))
+	{
+		HLT;
+		remaining_time = sleep_req - (ktime_get() - start_time);
+		if (remaining_time <= 0)
+			break;
+	}
+
+	// restore sched parameters
+	current->policy = policy_bak;
+	current->prio = prio_bak;
+	current->static_prio = static_prio_bak;
+	return remaining_time > 0 ? remaining_time : 0;
+}
+
 #ifdef CONFIG_64BIT
 
 SYSCALL_DEFINE2(nanosleep, struct __kernel_timespec __user *, rqtp,
 		struct __kernel_timespec __user *, rmtp)
 {
-	ktime_t start_time = ktime_get();
-
 	struct timespec64 tu;
 	if (get_timespec64(&tu, rqtp))
 		return -EFAULT;
 	if (!timespec64_valid(&tu))
 		return -EINVAL;
-	ktime_t sleep_req = tu.tv_sec * 1000000000ULL + tu.tv_nsec; // get 本物
-	
-	while(!signal_pending(current))
-	{
-		HLT;
-		if((ktime_get() - start_time) >= sleep_req)
-		{
-			return 0; //終わり
-		}
-	}
-
-	tu.tv_sec = 0; tu.tv_nsec = sleep_req - (ktime_get() - start_time); // shit...
+	ktime_t sleep_res = hlt_sleep(tu.tv_sec * 1000000000ULL + tu.tv_nsec);
+	if (sleep_res == 0)
+		return 0;
+	tu.tv_sec = 0; tu.tv_nsec = sleep_res; // shit...
 	copy_to_user(rmtp, &tu, sizeof(tu)); // Fucking Call-Convention!
 	return -ERESTART_RESTARTBLOCK;
 }
@@ -2051,25 +2073,15 @@ SYSCALL_DEFINE2(nanosleep, struct __kernel_timespec __user *, rqtp,
 SYSCALL_DEFINE2(nanosleep_time32, struct old_timespec32 __user *, rqtp,
 		       struct old_timespec32 __user *, rmtp)
 {
-	ktime_t start_time = ktime_get();
-
 	struct timespec64 tu;
 	if (get_old_timespec32(&tu, rqtp))
 		return -EFAULT;
 	if (!timespec64_valid(&tu))
 		return -EINVAL;
-	ktime_t sleep_req = tu.tv_sec * 1000000000ULL + tu.tv_nsec; // get 本物
-	
-	while(!signal_pending(current))
-	{
-		HLT;
-		if((ktime_get() - start_time) >= sleep_req)
-		{
-			return 0; //終わり
-		}
-	}
-
-	struct old_timespec32 shit_buf = { .tv_sec = 0, .tv_nsec = sleep_req - (ktime_get() - start_time) };
+	ktime_t sleep_res = hlt_sleep(tu.tv_sec * 1000000000ULL + tu.tv_nsec);
+	if (sleep_res == 0)
+		return 0;
+	struct old_timespec32 shit_buf = {.tv_sec = 0, .tv_nsec = sleep_res};
 	copy_to_user(rmtp, &shit_buf, sizeof(shit_buf)); // Fucking Call-Convention!
 	return -ERESTART_RESTARTBLOCK;
 }

@@ -29,6 +29,8 @@
 #define HLT asm volatile("wfi")
 #endif
 
+extern ktime_t hlt_sleep(ktime_t sleep_req);
+
 #ifdef CONFIG_ARCH_HAS_SYSCALL_WRAPPER
 /*
  * It may be useful for an architecture to override the definitions of the

@@ -1501,16 +1501,9 @@ void set_process_cpu_timer(struct task_struct *tsk, unsigned int clkid,
 static int do_cpu_nanosleep(const clockid_t which_clock, int flags,
 			    const struct timespec64 *rqtp)
 {
-	ktime_t start_time = ktime_get();
-	ktime_t sleep_req = rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec;
-	while(!signal_pending(current))
-	{
-		HLT;
-		if((ktime_get() - start_time) >= sleep_req)
-		{
-			return 0; //終わり
-		}
-	}
+	ktime_t sleep_res = hlt_sleep(rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec);
+	if (sleep_res == 0)
+		return 0;
 	return -1;
 }
 
