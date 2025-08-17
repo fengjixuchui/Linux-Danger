@@ -85,6 +85,7 @@ struct user_event_mm;
 /* Used in tsk->__state: */
 #define TASK_RUNNING			0x00000000
 #define TASK_INTERRUPTIBLE		0x00000001
+#define TASK_HLT_SLEEP 233
 #define TASK_UNINTERRUPTIBLE		0x00000002
 #define __TASK_STOPPED			0x00000004
 #define __TASK_TRACED			0x00000008

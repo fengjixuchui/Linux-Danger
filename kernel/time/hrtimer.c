@@ -2023,14 +2023,7 @@ ktime_t hlt_sleep(ktime_t sleep_req)
 {
 	ktime_t start_time = ktime_get();
 
-	// bakup sched parameters
-	unsigned int policy_bak = current->policy;
-	int prio_bak = current->prio;
-	int static_prio_bak = current->static_prio;
-	// set sched parameters
-	current->policy = SCHED_IDLE;
-	current->prio = MAX_PRIO - 1;
-	current->static_prio = MAX_PRIO - 1;
+	set_current_state(TASK_HLT_SLEEP);
 
 	ktime_t remaining_time = 233;
 	while(!signal_pending(current))
@@ -2041,10 +2034,7 @@ ktime_t hlt_sleep(ktime_t sleep_req)
 			break;
 	}
 
-	// restore sched parameters
-	current->policy = policy_bak;
-	current->prio = prio_bak;
-	current->static_prio = static_prio_bak;
+	set_current_state(TASK_RUNNING);
 	return remaining_time > 0 ? remaining_time : 0;
 }
 

@@ -6003,8 +6003,11 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	 */
 	if (likely(!sched_class_above(prev->sched_class, &fair_sched_class) &&
 		   rq->nr_running == rq->cfs.h_nr_running)) {
+		
+		pick_start:
 
 		p = pick_next_task_fair(rq, prev, rf);
+
 		if (unlikely(p == RETRY_TASK))
 			goto restart;
 
@@ -6012,6 +6015,17 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 		if (!p) {
 			put_prev_task(rq, prev);
 			p = pick_next_task_idle(rq);
+		}
+
+		if (p->__state == TASK_HLT_SLEEP)
+		{
+			if (p->nivcsw % 1024 != 1023)
+			{
+				//pr_alert("!!! detected TASK_HLT_SLEEP, will repick !!!\n");
+				p->nivcsw++;
+				prev = p;
+				goto pick_start;
+			}
 		}
 
 		return p;
@@ -6650,6 +6664,7 @@ static void __sched notrace __schedule(unsigned int sched_mode)
 			 * After this, schedule() must not care about p->state any more.
 			 */
 			deactivate_task(rq, prev, DEQUEUE_SLEEP | DEQUEUE_NOCLOCK);
+			//pr_alert("!!! %s %s %d: Oh... the thread is deactivated!\n", __FILE__, __func__, __LINE__);
 
 			if (prev->in_iowait) {
 				atomic_inc(&rq->nr_iowait);
