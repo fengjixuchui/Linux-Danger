@@ -1342,13 +1342,14 @@ SYSCALL_DEFINE2(clock_getres_time32, clockid_t, which_clock,
 /*
  * sys_clock_nanosleep() for CLOCK_REALTIME and CLOCK_TAI
  */
-static int common_nsleep(const clockid_t which_clock, int flags,
+int common_nsleep(const clockid_t which_clock, int flags,
 			 const struct timespec64 *rqtp)
 {
-	ktime_t sleep_res = hlt_sleep(rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec);
-	if (sleep_res == 0)
-		return 0;
-	return -1;
+	ktime_t sleep_req = rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec;
+	if (flags & TIMER_ABSTIME)
+		sleep_req -= ktime_get();
+	ktime_t remaining_time = hlt_sleep(sleep_req);
+	return remaining_time <= 0 ? 0 : -1;
 }
 
 /*
@@ -1359,13 +1360,7 @@ static int common_nsleep(const clockid_t which_clock, int flags,
 static int common_nsleep_timens(const clockid_t which_clock, int flags,
 				const struct timespec64 *rqtp)
 {
-	ktime_t sleep_req = rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec;
-	if (flags & TIMER_ABSTIME)
-		sleep_req = timens_ktime_to_host(which_clock, sleep_req);
-	ktime_t sleep_res = hlt_sleep(sleep_req);
-	if (sleep_res == 0)
-		return 0;
-	return -1;
+	return common_nsleep(which_clock, flags, rqtp);
 }
 
 SYSCALL_DEFINE4(clock_nanosleep, const clockid_t, which_clock, int, flags,
@@ -1390,7 +1385,6 @@ SYSCALL_DEFINE4(clock_nanosleep, const clockid_t, which_clock, int, flags,
 	current->restart_block.fn = do_no_restart_syscall;
 	current->restart_block.nanosleep.type = rmtp ? TT_NATIVE : TT_NONE;
 	current->restart_block.nanosleep.rmtp = rmtp;
-
 	return kc->nsleep(which_clock, flags, &t);
 }
 

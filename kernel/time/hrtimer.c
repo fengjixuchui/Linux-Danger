@@ -2035,7 +2035,7 @@ ktime_t hlt_sleep(ktime_t sleep_req)
 	}
 
 	set_current_state(TASK_RUNNING);
-	return remaining_time > 0 ? remaining_time : 0;
+	return remaining_time;
 }
 
 #ifdef CONFIG_64BIT
@@ -2048,10 +2048,10 @@ SYSCALL_DEFINE2(nanosleep, struct __kernel_timespec __user *, rqtp,
 		return -EFAULT;
 	if (!timespec64_valid(&tu))
 		return -EINVAL;
-	ktime_t sleep_res = hlt_sleep(tu.tv_sec * 1000000000ULL + tu.tv_nsec);
-	if (sleep_res == 0)
+	ktime_t remaining_time = hlt_sleep(tu.tv_sec * 1000000000ULL + tu.tv_nsec);
+	if (remaining_time <= 0)
 		return 0;
-	tu.tv_sec = 0; tu.tv_nsec = sleep_res; // shit...
+	tu.tv_sec = 0; tu.tv_nsec = remaining_time; // shit...
 	copy_to_user(rmtp, &tu, sizeof(tu)); // Fucking Call-Convention!
 	return -ERESTART_RESTARTBLOCK;
 }

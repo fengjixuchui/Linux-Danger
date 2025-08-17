@@ -1498,14 +1498,7 @@ void set_process_cpu_timer(struct task_struct *tsk, unsigned int clkid,
 	tick_dep_set_signal(tsk, TICK_DEP_BIT_POSIX_TIMER);
 }
 
-static int do_cpu_nanosleep(const clockid_t which_clock, int flags,
-			    const struct timespec64 *rqtp)
-{
-	ktime_t sleep_res = hlt_sleep(rqtp->tv_sec * 1000000000ULL + rqtp->tv_nsec);
-	if (sleep_res == 0)
-		return 0;
-	return -1;
-}
+extern int common_nsleep(const clockid_t which_clock, int flags, const struct timespec64 *rqtp);
 
 static long posix_cpu_nsleep_restart(struct restart_block *restart_block);
 
@@ -1523,7 +1516,7 @@ static int posix_cpu_nsleep(const clockid_t which_clock, int flags,
 	     CPUCLOCK_PID(which_clock) == task_pid_vnr(current)))
 		return -EINVAL;
 
-	error = do_cpu_nanosleep(which_clock, flags, rqtp);
+	error = common_nsleep(which_clock, flags, rqtp);
 
 	if (error == -ERESTART_RESTARTBLOCK) {
 
@@ -1543,7 +1536,7 @@ static long posix_cpu_nsleep_restart(struct restart_block *restart_block)
 
 	t = ns_to_timespec64(restart_block->nanosleep.expires);
 
-	return do_cpu_nanosleep(which_clock, TIMER_ABSTIME, &t);
+	return common_nsleep(which_clock, TIMER_ABSTIME, &t);
 }
 
 #define PROCESS_CLOCK	make_process_cpuclock(0, CPUCLOCK_SCHED)
