@@ -733,20 +733,6 @@ uint8_t hlt_sleep_eligible(struct sched_entity *se)
 	return 1;
 }
 
-void hlt_sleep_tricker(struct sched_entity *se)
-{
-	if (!se) return;
-
-	struct task_struct *p = container_of(se, struct task_struct, se);
-	if (p->__state == TASK_HLT_SLEEP)
-	{
-		//pr_alert("!!! hlt sleep sched_entity info: vruntime %llu, deadline %llu, min_deadline %llu !!!\n");
-		se->deadline += 819200;
-		se->min_deadline += 819200;
-		//pr_alert("!!! hlt sleep tricked for pid %d !!!\n", p->pid);
-	}
-}
-
 /*
  * Entity is eligible once it received less service than it ought to have,
  * eg. lag >= 0.
@@ -803,12 +789,7 @@ static void update_min_vruntime(struct cfs_rq *cfs_rq)
 
 	u64 vruntime = cfs_rq->min_vruntime;
 
-	if (curr) {
-		if (curr->on_rq)
-			vruntime = curr->vruntime;
-		else
-			curr = NULL;
-	}
+	if (curr && curr->on_rq) vruntime = curr->vruntime;
 
 	if (se) {
 		if (!curr)
@@ -1202,6 +1183,16 @@ static void update_curr(struct cfs_rq *cfs_rq)
 	}
 
 	account_cfs_rq_runtime(cfs_rq, delta_exec);
+}
+
+static void update_curr233(struct cfs_rq *cfs_rq)
+{
+	struct sched_entity *curr = cfs_rq->curr;
+	if (!curr) return;
+	curr->exec_start = rq_clock_task(rq_of(cfs_rq));
+	curr->vruntime += 233333333;
+	update_deadline(cfs_rq, curr);
+	update_min_vruntime(cfs_rq);
 }
 
 static void update_curr_fair(struct rq *rq)
@@ -5301,7 +5292,7 @@ pick_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *curr)
 	if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xFFF) != 0xFFF))
 	{
 		p->nivcsw++;
-		update_curr(cfs_rq); // trick the __pick_eevdf
+		update_curr233(cfs_rq); // trick the fucking __pick_eevdf
 		goto loop;
 	}
 	
