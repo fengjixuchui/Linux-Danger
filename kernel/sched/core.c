@@ -6003,8 +6003,6 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	 */
 	if (likely(!sched_class_above(prev->sched_class, &fair_sched_class) &&
 		   rq->nr_running == rq->cfs.h_nr_running)) {
-		
-		pick_start:
 
 		p = pick_next_task_fair(rq, prev, rf);
 
@@ -6015,13 +6013,6 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 		if (!p) {
 			put_prev_task(rq, prev);
 			p = pick_next_task_idle(rq);
-		}
-
-		if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xFFF) != 0xFFF))
-		{
-			p->nivcsw++;
-			prev = p;
-			goto pick_start;
 		}
 
 		return p;

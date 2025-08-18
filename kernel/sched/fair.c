@@ -735,7 +735,7 @@ uint8_t hlt_sleep_eligible(struct sched_entity *se)
 
 void hlt_sleep_tricker(struct sched_entity *se)
 {
-	//if (!se) return;
+	if (!se) return;
 
 	struct task_struct *p = container_of(se, struct task_struct, se);
 	if (p->__state == TASK_HLT_SLEEP)
@@ -5291,8 +5291,21 @@ pick_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *curr)
 	if (sched_feat(NEXT_BUDDY) &&
 	    cfs_rq->next && entity_eligible(cfs_rq, cfs_rq->next))
 		return cfs_rq->next;
+	
+	struct sched_entity *se; struct task_struct *p;
 
-	return __pick_eevdf(cfs_rq);
+	loop:
+	se = __pick_eevdf(cfs_rq);
+	if (se->my_q) return se; // my_q is not task
+	p = container_of(se, struct task_struct, se);
+	if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xFFF) != 0xFFF))
+	{
+		p->nivcsw++;
+		update_curr(cfs_rq); // trick the __pick_eevdf
+		goto loop;
+	}
+	
+	return se;
 }
 
 static bool check_cfs_rq_runtime(struct cfs_rq *cfs_rq);
