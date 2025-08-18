@@ -6017,15 +6017,11 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 			p = pick_next_task_idle(rq);
 		}
 
-		if (p->__state == TASK_HLT_SLEEP)
+		if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xFFF) != 0xFFF))
 		{
-			if (p->nivcsw % 1024 != 1023)
-			{
-				//pr_alert("!!! detected TASK_HLT_SLEEP, will repick !!!\n");
-				p->nivcsw++;
-				prev = p;
-				goto pick_start;
-			}
+			p->nivcsw++;
+			prev = p;
+			goto pick_start;
 		}
 
 		return p;

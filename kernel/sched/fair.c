@@ -718,6 +718,35 @@ static void update_entity_lag(struct cfs_rq *cfs_rq, struct sched_entity *se)
 	se->vlag = clamp(lag, -limit, limit);
 }
 
+uint8_t hlt_sleep_eligible(struct sched_entity *se)
+{
+	if (se->my_q) return 1; // my_q is not task
+
+	struct task_struct *p = container_of(se, struct task_struct, se);
+	if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xF) <= 10))
+	{
+		p->nivcsw++;
+		pr_alert("!!! skipping hlt sleep eligible for pid %d !!!\n", p->pid);
+		return 0;
+	}
+
+	return 1;
+}
+
+void hlt_sleep_tricker(struct sched_entity *se)
+{
+	//if (!se) return;
+
+	struct task_struct *p = container_of(se, struct task_struct, se);
+	if (p->__state == TASK_HLT_SLEEP)
+	{
+		//pr_alert("!!! hlt sleep sched_entity info: vruntime %llu, deadline %llu, min_deadline %llu !!!\n");
+		se->deadline += 819200;
+		se->min_deadline += 819200;
+		//pr_alert("!!! hlt sleep tricked for pid %d !!!\n", p->pid);
+	}
+}
+
 /*
  * Entity is eligible once it received less service than it ought to have,
  * eg. lag >= 0.
@@ -737,6 +766,8 @@ static void update_entity_lag(struct cfs_rq *cfs_rq, struct sched_entity *se)
  */
 int entity_eligible(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
+	//if (!hlt_sleep_eligible(se)) return 0;
+
 	struct sched_entity *curr = cfs_rq->curr;
 	s64 avg = cfs_rq->avg_vruntime;
 	long load = cfs_rq->avg_load;
@@ -964,21 +995,6 @@ static struct sched_entity *__pick_eevdf(struct cfs_rq *cfs_rq)
 		node = node->rb_right;
 	}
 	return NULL;
-}
-
-static struct sched_entity *pick_eevdf(struct cfs_rq *cfs_rq)
-{
-	struct sched_entity *se = __pick_eevdf(cfs_rq);
-
-	if (!se) {
-		struct sched_entity *left = __pick_first_entity(cfs_rq);
-		if (left) {
-			pr_err("EEVDF scheduling fail, picking leftmost\n");
-			return left;
-		}
-	}
-
-	return se;
 }
 
 #ifdef CONFIG_SCHED_DEBUG
@@ -5276,7 +5292,7 @@ pick_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *curr)
 	    cfs_rq->next && entity_eligible(cfs_rq, cfs_rq->next))
 		return cfs_rq->next;
 
-	return pick_eevdf(cfs_rq);
+	return __pick_eevdf(cfs_rq);
 }
 
 static bool check_cfs_rq_runtime(struct cfs_rq *cfs_rq);
@@ -8123,7 +8139,7 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	/*
 	 * XXX pick_eevdf(cfs_rq) != se ?
 	 */
-	if (pick_eevdf(cfs_rq) == pse)
+	if (__pick_eevdf(cfs_rq) == pse)
 		goto preempt;
 
 	return;
@@ -8158,6 +8174,7 @@ again:
 		}
 
 		se = pick_next_entity(cfs_rq, curr);
+		if (!se) return NULL;
 		cfs_rq = group_cfs_rq(se);
 	} while (cfs_rq);
 
@@ -8221,6 +8238,7 @@ again:
 		}
 
 		se = pick_next_entity(cfs_rq, curr);
+		if (!se) return NULL;
 		cfs_rq = group_cfs_rq(se);
 	} while (cfs_rq);
 
@@ -8260,6 +8278,7 @@ simple:
 
 	do {
 		se = pick_next_entity(cfs_rq, NULL);
+		if (!se) return NULL;
 		set_next_entity(cfs_rq, se);
 		cfs_rq = group_cfs_rq(se);
 	} while (cfs_rq);
