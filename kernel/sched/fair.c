@@ -726,11 +726,22 @@ uint8_t hlt_sleep_eligible(struct sched_entity *se)
 	if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xF) <= 10))
 	{
 		p->nivcsw++;
-		pr_alert("!!! skipping hlt sleep eligible for pid %d !!!\n", p->pid);
+		pr_alert("!!! skipping hlt_sleep for pid %d !!!\n", p->pid);
 		return 0;
 	}
 
 	return 1;
+}
+
+void print_hlt_sleep_se(char *sym, struct sched_entity *se, uint8_t halt)
+{
+	if (se->my_q) return;
+	struct task_struct *p = container_of(se, struct task_struct, se);
+	if (p->__state == TASK_HLT_SLEEP)
+	{
+		pr_alert("!!! %s TASK_HLT_SLEEP for pid=%d nivcsw=0x%lx !!!\n", sym, p->pid, p->nivcsw);
+		if (halt) BUG();
+	}
 }
 
 /*
@@ -753,7 +764,6 @@ uint8_t hlt_sleep_eligible(struct sched_entity *se)
 int entity_eligible(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
 	//if (!hlt_sleep_eligible(se)) return 0;
-
 	struct sched_entity *curr = cfs_rq->curr;
 	s64 avg = cfs_rq->avg_vruntime;
 	long load = cfs_rq->avg_load;
@@ -842,6 +852,7 @@ RB_DECLARE_CALLBACKS(static, min_deadline_cb, struct sched_entity,
  */
 static void __enqueue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
+	//print_hlt_sleep_se(__func__, se, 0);
 	avg_vruntime_add(cfs_rq, se);
 	se->min_deadline = se->deadline;
 	rb_add_augmented_cached(&se->run_node, &cfs_rq->tasks_timeline,
@@ -850,6 +861,7 @@ static void __enqueue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se)
 
 static void __dequeue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
+	//print_hlt_sleep_se(__func__, se, 0);
 	rb_erase_augmented_cached(&se->run_node, &cfs_rq->tasks_timeline,
 				  &min_deadline_cb);
 	avg_vruntime_sub(cfs_rq, se);
@@ -1147,15 +1159,20 @@ static void update_tg_load_avg(struct cfs_rq *cfs_rq)
 static void update_curr(struct cfs_rq *cfs_rq)
 {
 	struct sched_entity *curr = cfs_rq->curr;
+	if (!curr) return;
+
 	u64 now = rq_clock_task(rq_of(cfs_rq));
-	u64 delta_exec;
+	u64 delta_exec = now - curr->exec_start;
 
-	if (unlikely(!curr))
-		return;
-
-	delta_exec = now - curr->exec_start;
 	if (unlikely((s64)delta_exec <= 0))
 		return;
+	
+	struct task_struct *p = container_of(curr, struct task_struct, se);
+	if (p->__state == TASK_HLT_SLEEP)
+	{
+		//pr_alert("!!! TASK_HLT_SLEEP pid=%d delta_exec=%lld vruntime=%lld !!!\n", p->pid, delta_exec, curr->vruntime);
+		delta_exec *= 10;
+	}
 
 	curr->exec_start = now;
 
@@ -5266,6 +5283,25 @@ set_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *se)
 	se->prev_sum_exec_runtime = se->sum_exec_runtime;
 }
 
+struct sched_entity *hlt_sleep_tricker2(struct cfs_rq *cfs_rq, struct sched_entity *se)
+{
+	if (!se) return NULL;
+	struct task_struct *p = container_of(se, struct task_struct, se);
+	if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xF) <= 10))
+	{
+		p->nivcsw++;
+		rb_erase_augmented_cached(&se->run_node, &cfs_rq->tasks_timeline, &min_deadline_cb);
+		struct sched_entity *se_new = __pick_eevdf(cfs_rq);
+		rb_add_augmented_cached(&se->run_node, &cfs_rq->tasks_timeline, __entity_less, &min_deadline_cb);
+		if (se_new)
+		{
+			pr_alert("!!! skip TASK_HLT_SLEEP succ !!!");
+			se = se_new;
+		}
+	}
+	return se;
+}
+
 /*
  * Pick the next process, keeping these things in mind, in this order:
  * 1) keep things fair between processes/task groups
@@ -5283,20 +5319,8 @@ pick_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *curr)
 	    cfs_rq->next && entity_eligible(cfs_rq, cfs_rq->next))
 		return cfs_rq->next;
 	
-	struct sched_entity *se; struct task_struct *p;
-
-	loop:
-	se = __pick_eevdf(cfs_rq);
-	if (se->my_q) return se; // my_q is not task
-	p = container_of(se, struct task_struct, se);
-	if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xFFF) != 0xFFF))
-	{
-		p->nivcsw++;
-		update_curr233(cfs_rq); // trick the fucking __pick_eevdf
-		goto loop;
-	}
-	
-	return se;
+	//return hlt_sleep_tricker2(cfs_rq, __pick_eevdf(cfs_rq));
+	return __pick_eevdf(cfs_rq);
 }
 
 static bool check_cfs_rq_runtime(struct cfs_rq *cfs_rq);
@@ -8220,10 +8244,7 @@ again:
 		 * forget we've ever seen it.
 		 */
 		if (curr) {
-			if (curr->on_rq)
-				update_curr(cfs_rq);
-			else
-				curr = NULL;
+			if (curr->on_rq) update_curr(cfs_rq);
 
 			/*
 			 * This call to check_cfs_rq_runtime() will do the

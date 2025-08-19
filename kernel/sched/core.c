@@ -6015,6 +6015,24 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 			p = pick_next_task_idle(rq);
 		}
 
+		// if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xF) <= 10))
+		// {
+		// 	p->nivcsw++;
+		// 	pr_alert("!!! skipping hlt_sleep for pid %d, looking for new task !!!\n", p->pid);
+		// 	// pick_next_task_fair logic: choose_nxt_task -> enque_curr -> deque_choosen_one
+		// 	p = pick_next_task_fair(rq, p, rf);
+		// 	if (prev != p)
+		// 	{
+		// 		// prev is in queue, p is NOT
+		// 		p = pick_next_task_fair(rq, p, rf); // choose another task except p, then put p in
+		// 	}
+		// 	else
+		// 	{
+		// 		// oh shit, p is STILL in queue...
+		// 	}
+		// 	pr_alert("!!! new pid %d !!!\n", p->pid);
+		// }
+
 		return p;
 	}
 
