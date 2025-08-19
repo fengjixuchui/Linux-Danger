@@ -1166,13 +1166,6 @@ static void update_curr(struct cfs_rq *cfs_rq)
 
 	if (unlikely((s64)delta_exec <= 0))
 		return;
-	
-	struct task_struct *p = container_of(curr, struct task_struct, se);
-	if (p->__state == TASK_HLT_SLEEP)
-	{
-		//pr_alert("!!! TASK_HLT_SLEEP pid=%d delta_exec=%lld vruntime=%lld !!!\n", p->pid, delta_exec, curr->vruntime);
-		delta_exec *= 10;
-	}
 
 	curr->exec_start = now;
 
@@ -1187,7 +1180,17 @@ static void update_curr(struct cfs_rq *cfs_rq)
 	curr->sum_exec_runtime += delta_exec;
 	schedstat_add(cfs_rq->exec_clock, delta_exec);
 
-	curr->vruntime += calc_delta_fair(delta_exec, curr);
+	struct task_struct *p = container_of(curr, struct task_struct, se);
+	if (p->__state == TASK_HLT_SLEEP)
+	{
+		//pr_alert("!!! TASK_HLT_SLEEP pid=%d delta_exec=%lld vruntime=%lld !!!\n", p->pid, delta_exec, curr->vruntime);
+		curr->vruntime += calc_delta_fair(delta_exec, curr) * 1000;
+	}
+	else
+	{
+		curr->vruntime += calc_delta_fair(delta_exec, curr);
+	}
+
 	update_deadline(cfs_rq, curr);
 	update_min_vruntime(cfs_rq);
 
