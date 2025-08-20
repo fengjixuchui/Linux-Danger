@@ -134,7 +134,12 @@ static int smpboot_thread_fn(void *data)
 			continue;
 		}
 
-		BUG_ON(td->cpu != smp_processor_id());
+		//BUG_ON(td->cpu != smp_processor_id());
+		if (td->cpu != smp_processor_id())
+		{
+			pr_alert("!!! %s td->cpu=%d, smp_processor_id()=%d !!!\n", __func__, td->cpu, smp_processor_id());
+			BUG();
+		}
 
 		/* Check for state change setup */
 		switch (td->status) {
@@ -188,6 +193,7 @@ __smpboot_create_thread(struct smp_hotplug_thread *ht, unsigned int cpu)
 		return PTR_ERR(tsk);
 	}
 	kthread_set_per_cpu(tsk, cpu);
+	//pr_alert("!!! %s cpu=%d tsk->thread_info.cpu=%d tsk=%llx !!!\n", __func__, cpu, tsk->thread_info.cpu, tsk);
 	/*
 	 * Park the thread so that it could start right on the CPU
 	 * when it is available.

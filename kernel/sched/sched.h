@@ -2334,7 +2334,8 @@ extern struct sched_class __sched_class_lowest[];
 extern const struct sched_class stop_sched_class;
 extern const struct sched_class dl_sched_class;
 extern const struct sched_class rt_sched_class;
-extern const struct sched_class fair_sched_class;
+//extern const struct sched_class fair_sched_class;
+extern const struct sched_class easy_sched_class;
 extern const struct sched_class idle_sched_class;
 
 static inline bool sched_stop_runnable(struct rq *rq)
@@ -2357,7 +2358,8 @@ static inline bool sched_fair_runnable(struct rq *rq)
 	return rq->cfs.nr_running > 0;
 }
 
-extern struct task_struct *pick_next_task_fair(struct rq *rq, struct task_struct *prev, struct rq_flags *rf);
+//extern struct task_struct *pick_next_task_fair(struct rq *rq, struct task_struct *prev, struct rq_flags *rf);
+extern struct task_struct *pick_next_task_easy(struct rq *rq);
 extern struct task_struct *pick_next_task_idle(struct rq *rq);
 
 #define SCA_CHECK		0x01

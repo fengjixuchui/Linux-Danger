@@ -1196,7 +1196,7 @@ static inline bool __need_bw_check(struct rq *rq, struct task_struct *p)
 	if (rq->nr_running != 1)
 		return false;
 
-	if (p->sched_class != &fair_sched_class)
+	if (p->sched_class != &easy_sched_class)
 		return false;
 
 	if (!task_on_rq_queued(p))
@@ -1320,7 +1320,7 @@ static void set_load_weight(struct task_struct *p, bool update_load)
 	 * SCHED_OTHER tasks have to update their load when changing their
 	 * weight
 	 */
-	if (update_load && p->sched_class == &fair_sched_class) {
+	if (update_load && p->sched_class == &easy_sched_class) {
 		reweight_task(p, prio);
 	} else {
 		load->weight = scale_load(sched_prio_to_weight[prio]);
@@ -3354,7 +3354,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 	 * time relying on p->on_rq.
 	 */
 	WARN_ON_ONCE(state == TASK_RUNNING &&
-		     p->sched_class == &fair_sched_class &&
+		     p->sched_class == &easy_sched_class &&
 		     (p->on_rq && !task_on_rq_migrating(p)));
 
 #ifdef CONFIG_LOCKDEP
@@ -4338,6 +4338,7 @@ int try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 			wake_flags |= WF_MIGRATED;
 			psi_ttwu_dequeue(p);
 			set_task_cpu(p, cpu);
+			pr_alert("!!! %s migrated to CPU %d\n", __func__, cpu);
 		}
 #else
 		cpu = task_cpu(p);
@@ -4768,7 +4769,7 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 	else if (rt_prio(p->prio))
 		p->sched_class = &rt_sched_class;
 	else
-		p->sched_class = &fair_sched_class;
+		p->sched_class = &easy_sched_class;
 
 	init_entity_runnable_average(&p->se);
 
@@ -5994,49 +5995,7 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 {
 	const struct sched_class *class;
 	struct task_struct *p;
-
-	/*
-	 * Optimization: we know that if all tasks are in the fair class we can
-	 * call that function directly, but only if the @prev task wasn't of a
-	 * higher scheduling class, because otherwise those lose the
-	 * opportunity to pull in more work from other CPUs.
-	 */
-	if (likely(!sched_class_above(prev->sched_class, &fair_sched_class) &&
-		   rq->nr_running == rq->cfs.h_nr_running)) {
-
-		p = pick_next_task_fair(rq, prev, rf);
-
-		if (unlikely(p == RETRY_TASK))
-			goto restart;
-
-		/* Assume the next prioritized class is idle_sched_class */
-		if (!p) {
-			put_prev_task(rq, prev);
-			p = pick_next_task_idle(rq);
-		}
-
-		// if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xF) <= 10))
-		// {
-		// 	p->nivcsw++;
-		// 	pr_alert("!!! skipping hlt_sleep for pid %d, looking for new task !!!\n", p->pid);
-		// 	// pick_next_task_fair logic: choose_nxt_task -> enque_curr -> deque_choosen_one
-		// 	p = pick_next_task_fair(rq, p, rf);
-		// 	if (prev != p)
-		// 	{
-		// 		// prev is in queue, p is NOT
-		// 		p = pick_next_task_fair(rq, p, rf); // choose another task except p, then put p in
-		// 	}
-		// 	else
-		// 	{
-		// 		// oh shit, p is STILL in queue...
-		// 	}
-		// 	pr_alert("!!! new pid %d !!!\n", p->pid);
-		// }
-
-		return p;
-	}
-
-restart:
+	
 	put_prev_task_balance(rq, prev, rf);
 
 	for_each_class(class) {
@@ -6604,9 +6563,12 @@ static void __sched notrace __schedule(unsigned int sched_mode)
 	struct rq *rq;
 	int cpu;
 
+	// pr_alert("!!! enter %s \n", __func__);
 	cpu = smp_processor_id();
 	rq = cpu_rq(cpu);
 	prev = rq->curr;
+
+	//pr_alert("!!! %s cpu=%d, rq=%llx, prev=%llx\n", __func__, cpu, rq, prev);
 
 	schedule_debug(prev, !!sched_mode);
 
@@ -6678,8 +6640,9 @@ static void __sched notrace __schedule(unsigned int sched_mode)
 		}
 		switch_count = &prev->nvcsw;
 	}
-
+	//pr_alert("!!! %s, call pick_next_task\n", __func__);
 	next = pick_next_task(rq, prev, &rf);
+	//next = pick_next_task_easy(rq);
 	clear_tsk_need_resched(prev);
 	clear_preempt_need_resched();
 #ifdef CONFIG_SCHED_DEBUG
@@ -7050,7 +7013,7 @@ static void __setscheduler_prio(struct task_struct *p, int prio)
 	else if (rt_prio(prio))
 		p->sched_class = &rt_sched_class;
 	else
-		p->sched_class = &fair_sched_class;
+		p->sched_class = &easy_sched_class;
 
 	p->prio = prio;
 }
@@ -9934,13 +9897,13 @@ void __init sched_init(void)
 	unsigned long ptr = 0;
 	int i;
 
-	/* Make sure the linker didn't screw up */
-	BUG_ON(&idle_sched_class != &fair_sched_class + 1 ||
-	       &fair_sched_class != &rt_sched_class + 1 ||
-	       &rt_sched_class   != &dl_sched_class + 1);
-#ifdef CONFIG_SMP
-	BUG_ON(&dl_sched_class != &stop_sched_class + 1);
-#endif
+// 	/* Make sure the linker didn't screw up */
+// 	BUG_ON(&idle_sched_class != &easy_sched_class + 1 ||
+// 	       &easy_sched_class != &rt_sched_class + 1 ||
+// 	       &rt_sched_class   != &dl_sched_class + 1);
+// #ifdef CONFIG_SMP
+// 	BUG_ON(&dl_sched_class != &stop_sched_class + 1);
+// #endif
 
 	wait_bit_init();
 
