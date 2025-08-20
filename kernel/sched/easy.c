@@ -43,17 +43,16 @@ void easy_sched_init(easy_sched_struct_def *easy_context)
 
 static void enqueue_task_easy(struct rq *rq, struct task_struct *p, int flags)
 {
-    struct kthread *kthread = (struct kthread *)p->worker_private;
-    if (kthread) BUG_ON(p->thread_info.cpu != kthread->cpu);
+    // struct kthread *kthread = (struct kthread *)p->worker_private;
+    // if (kthread) BUG_ON(p->thread_info.cpu != kthread->cpu);
 
     easy_sched_struct_def *easy_context = easy_cpu_contexts + p->thread_info.cpu;
     if(!easy_context->tasks) easy_sched_init(easy_context);
 
     if (easy_context->task_count < EASY_MAX_TASKS) {
         easy_context->tasks[easy_context->task_count++] = p;
-        p->on_rq = 1;
         rq->nr_running = easy_context->task_count;
-        pr_alert("!!! %s 0x%llx cpu=%d succ !!!\n", __func__, p, p->thread_info.cpu);
+        //pr_alert("!!! %s 0x%llx cpu=%d succ !!!\n", __func__, p, p->thread_info.cpu);
     }
     else
     {
@@ -68,7 +67,6 @@ static void dequeue_task_easy(struct rq *rq, struct task_struct *p, int flags)
     for (int i = 0; i < easy_context->task_count; i++) {
         if (tasks[i] == p) {
             tasks[i] = tasks[--easy_context->task_count];
-            p->on_rq = 0;
             rq->nr_running = easy_context->task_count;
             //pr_alert("!!! %s 0x%llx succ !!!\n", __func__, p);
             return;
@@ -116,16 +114,20 @@ static int balance_easy(struct rq *rq, struct task_struct *prev, struct rq_flags
 static int select_task_rq_easy(struct task_struct *p, int sd_flag, int wake_flags)
 {
     int cpu = task_cpu(p);
-    if (!cpu_online(cpu))
-        cpu = raw_smp_processor_id();
-    pr_alert("!!! %s 0x%llx, cpu %d !!!\n", __func__, p, cpu);
+    struct kthread *kthread = (struct kthread *)p->worker_private;
+    if (kthread) cpu = kthread->cpu;
+    //pr_alert("!!! %s 0x%llx, cpu %d !!!\n", __func__, p, cpu);
     return cpu;
 }
 static void migrate_task_rq_easy(struct task_struct *p, int cpu) { }
 static void rq_online_easy(struct rq *rq) { }
 static void rq_offline_easy(struct rq *rq) { }
 static void task_dead_easy(struct task_struct *p) { }
-static void set_cpus_allowed_easy(struct task_struct *p, struct affinity_context *ctx) {}
+static void set_cpus_allowed_easy(struct task_struct *p, struct affinity_context *ctx)
+{
+    set_cpus_allowed_common(p, ctx);
+    //pr_alert("!!! %s 0x%llx, nr_cpus_allowed %d !!!\n", __func__, p, p->nr_cpus_allowed);
+}
 #endif
 static void prio_changed_easy(struct rq *rq, struct task_struct *p, int oldprio) { }
 static void switched_from_easy(struct rq *rq, struct task_struct *p) { }
