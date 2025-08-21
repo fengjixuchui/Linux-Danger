@@ -115,9 +115,18 @@ static void task_fork_easy(struct task_struct *p) { }
 static int balance_easy(struct rq *rq, struct task_struct *prev, struct rq_flags *rf) { return 0; }
 static int select_task_rq_easy(struct task_struct *p, int sd_flag, int wake_flags)
 {
-    int cpu = task_cpu(p);
+    static int magicNum = 0;
+    int cpu = 0, cpu_num = 0;
+    int cpus[128] = {0};
+
     struct kthread *kthread = (struct kthread *)p->worker_private;
-    if (kthread) cpu = kthread->cpu;
+    if(kthread) {cpu = kthread->cpu; goto fin;}
+
+    for_each_cpu(cpu, p->cpus_ptr) {if(cpu_online(cpu)) cpus[cpu_num++] = cpu;}
+    cpu = cpus[magicNum % cpu_num];
+    
+    fin:
+    magicNum++;
     //pr_alert("!!! %s 0x%llx, cpu %d !!!\n", __func__, p, cpu);
     return cpu;
 }

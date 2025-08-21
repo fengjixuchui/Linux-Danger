@@ -4338,7 +4338,7 @@ int try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 			wake_flags |= WF_MIGRATED;
 			psi_ttwu_dequeue(p);
 			set_task_cpu(p, cpu);
-			pr_alert("!!! %s migrated to CPU %d\n", __func__, cpu);
+			//pr_alert("!!! %s migrated to CPU %d\n", __func__, cpu);
 		}
 #else
 		cpu = task_cpu(p);
