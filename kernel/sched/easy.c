@@ -116,18 +116,21 @@ static int balance_easy(struct rq *rq, struct task_struct *prev, struct rq_flags
 static int select_task_rq_easy(struct task_struct *p, int sd_flag, int wake_flags)
 {
     static int magicNum = 0;
-    int cpu = 0, cpu_num = 0;
-    int cpus[128] = {0};
+    int cpu = 0;
 
     struct kthread *kthread = (struct kthread *)p->worker_private;
     if(kthread) {cpu = kthread->cpu; goto fin;}
 
-    for_each_cpu(cpu, p->cpus_ptr) {if(cpu_online(cpu)) cpus[cpu_num++] = cpu;}
-    cpu = cpus[magicNum % cpu_num];
-    
+    cpu = magicNum % p->nr_cpus_allowed;
+    if (!cpu_online(cpu))
+    {
+        pr_alert("!!! %s SHIT cpu %d is offline !!!\n", __func__, cpu);
+        cpu = p->thread_info.cpu;
+    }
+
     fin:
-    magicNum++;
     //pr_alert("!!! %s 0x%llx, cpu %d !!!\n", __func__, p, cpu);
+    magicNum++;
     return cpu;
 }
 static void migrate_task_rq_easy(struct task_struct *p, int cpu) { }
