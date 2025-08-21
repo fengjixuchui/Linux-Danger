@@ -5995,6 +5995,11 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 {
 	const struct sched_class *class;
 	struct task_struct *p;
+
+	// if (!sched_class_above(prev->sched_class, &easy_sched_class)) {
+	// 	//pr_alert("!!! %s shortcut to pick_next_task_easy !!!\n", __func__);
+	// 	return pick_next_task_easy(rq);
+	// }
 	
 	put_prev_task_balance(rq, prev, rf);
 
@@ -6607,7 +6612,7 @@ static void __sched notrace __schedule(unsigned int sched_mode)
 	 * that we form a control dependency vs deactivate_task() below.
 	 */
 	prev_state = READ_ONCE(prev->__state);
-	if (!(sched_mode & SM_MASK_PREEMPT) && prev_state) {
+	if (!(sched_mode & SM_MASK_PREEMPT) && prev_state && (prev_state != TASK_HLT_SLEEP)) {
 		if (signal_pending_state(prev_state, prev)) {
 			WRITE_ONCE(prev->__state, TASK_RUNNING);
 		} else {

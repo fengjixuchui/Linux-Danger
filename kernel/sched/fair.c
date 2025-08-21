@@ -718,7 +718,7 @@ static void update_entity_lag(struct cfs_rq *cfs_rq, struct sched_entity *se)
 	se->vlag = clamp(lag, -limit, limit);
 }
 
-uint8_t hlt_sleep_eligible(struct sched_entity *se)
+static uint8_t hlt_sleep_eligible(struct sched_entity *se)
 {
 	if (se->my_q) return 1; // my_q is not task
 

@@ -2021,19 +2021,16 @@ EXPORT_SYMBOL_GPL(hrtimer_init_sleeper);
 
 ktime_t hlt_sleep(ktime_t sleep_req)
 {
-	ktime_t start_time = ktime_get();
-
+	ktime_t start_time = ktime_get(), remaining_time = 233;
 	set_current_state(TASK_HLT_SLEEP);
-
-	ktime_t remaining_time = 233;
 	while(!signal_pending(current))
 	{
 		HLT;
+		schedule();
 		remaining_time = sleep_req - (ktime_get() - start_time);
 		if (remaining_time <= 0)
 			break;
 	}
-
 	set_current_state(TASK_RUNNING);
 	return remaining_time;
 }

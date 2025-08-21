@@ -68,6 +68,17 @@ static void dequeue_task_easy(struct rq *rq, struct task_struct *p, int flags)
     pr_alert("!!! %s 0x%llx failed !!!\n", __func__, p);
 }
 
+static uint8_t hlt_sleep_eligible(struct task_struct *p)
+{
+	if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xFF) != 0xFF))
+	{
+		p->nivcsw++;
+		//pr_alert("!!! skipping hlt_sleep for pid %d !!!\n", p->pid);
+		return 0;
+	}
+	return 1;
+}
+
 struct task_struct *pick_next_task_easy(struct rq *rq)
 {
     //pr_alert("!!! %s !!!\n", __func__);
@@ -77,16 +88,21 @@ struct task_struct *pick_next_task_easy(struct rq *rq)
         //pr_alert("!!! %s no tasks available, will ret NULL !!!\n", __func__);
         return NULL;
     }
-    struct task_struct *p = easy_context->tasks[easy_context->index % easy_context->task_count];
-    //pr_alert("!!! %s 0x%llx !!!\n", __func__, p);
-    easy_context->index++;
-    return p;
+    int index_bak = easy_context->index;
+    for (int i=0; i<easy_context->task_count; i++)
+    {
+        struct task_struct *p = easy_context->tasks[easy_context->index++ % easy_context->task_count];
+        if (hlt_sleep_eligible(p)) return p;
+    }
+    //pr_alert("!!! %s no tasks eligible, will revert as it !!!\n", __func__);
+    easy_context->index = index_bak;
+    return easy_context->tasks[easy_context->index++ % easy_context->task_count];
 }
 
 static void yield_task_easy(struct rq *rq)
 {
     easy_sched_struct_def *easy_context = easy_cpu_contexts + rq->cpu;
-    easy_context->index = (easy_context->index + 1) % easy_context->task_count;
+    easy_context->index++;
 }
 
 static void put_prev_task_easy(struct rq *rq, struct task_struct *p) { }
