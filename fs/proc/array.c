@@ -545,7 +545,7 @@ static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
 
 			min_flt += sig->min_flt;
 			maj_flt += sig->maj_flt;
-			thread_group_cputime_adjusted(task, &utime, &stime);
+			//thread_group_cputime_adjusted(task, &utime, &stime);
 			gtime += sig->gtime;
 
 			if (sig->flags & (SIGNAL_GROUP_EXIT | SIGNAL_STOP_STOPPED))
@@ -564,7 +564,7 @@ static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
 	if (!whole) {
 		min_flt = task->min_flt;
 		maj_flt = task->maj_flt;
-		task_cputime_adjusted(task, &utime, &stime);
+		//task_cputime_adjusted(task, &utime, &stime);
 		gtime = task_gtime(task);
 	}
 
@@ -592,8 +592,8 @@ static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
 	seq_put_decimal_ull(m, " ", cmin_flt);
 	seq_put_decimal_ull(m, " ", maj_flt);
 	seq_put_decimal_ull(m, " ", cmaj_flt);
-	seq_put_decimal_ull(m, " ", nsec_to_clock_t(utime));
-	seq_put_decimal_ull(m, " ", nsec_to_clock_t(stime));
+	seq_put_decimal_ull(m, " ", nsec_to_clock_t(task->utime));
+	seq_put_decimal_ull(m, " ", nsec_to_clock_t(task->stime));
 	seq_put_decimal_ll(m, " ", nsec_to_clock_t(cutime));
 	seq_put_decimal_ll(m, " ", nsec_to_clock_t(cstime));
 	seq_put_decimal_ll(m, " ", priority);
