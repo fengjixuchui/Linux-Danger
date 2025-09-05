@@ -27,17 +27,16 @@
  */
 #define PMD_PRESENT_INVALID	(_AT(pteval_t, 1) << 59) /* only when !PMD_SECT_VALID */
 
-#define _PROT_DEFAULT		(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED)
+#define _PROT_DEFAULT		(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED | PTE_USER)
 #define _PROT_SECT_DEFAULT	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)
 
-#define PROT_DEFAULT		(_PROT_DEFAULT | PTE_MAYBE_NG)
 #define PROT_SECT_DEFAULT	(_PROT_SECT_DEFAULT | PMD_MAYBE_NG)
 
-#define PROT_DEVICE_nGnRnE	(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_WRITE | PTE_ATTRINDX(MT_DEVICE_nGnRnE))
-#define PROT_DEVICE_nGnRE	(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_WRITE | PTE_ATTRINDX(MT_DEVICE_nGnRE))
-#define PROT_NORMAL_NC		(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_WRITE | PTE_ATTRINDX(MT_NORMAL_NC))
-#define PROT_NORMAL		(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_WRITE | PTE_ATTRINDX(MT_NORMAL))
-#define PROT_NORMAL_TAGGED	(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_WRITE | PTE_ATTRINDX(MT_NORMAL_TAGGED))
+#define PROT_DEVICE_nGnRnE	(_PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_WRITE | PTE_ATTRINDX(MT_DEVICE_nGnRnE))
+#define PROT_DEVICE_nGnRE	(_PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_WRITE | PTE_ATTRINDX(MT_DEVICE_nGnRE))
+#define PROT_NORMAL_NC		(_PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_WRITE | PTE_ATTRINDX(MT_NORMAL_NC))
+#define PROT_NORMAL		(_PROT_DEFAULT | PTE_WRITE | PTE_ATTRINDX(MT_NORMAL))
+#define PROT_NORMAL_TAGGED	(_PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_WRITE | PTE_ATTRINDX(MT_NORMAL_TAGGED))
 
 #define PROT_SECT_DEVICE_nGnRE	(PROT_SECT_DEFAULT | PMD_SECT_PXN | PMD_SECT_UXN | PMD_ATTRINDX(MT_DEVICE_nGnRE))
 #define PROT_SECT_NORMAL	(PROT_SECT_DEFAULT | PMD_SECT_PXN | PMD_SECT_UXN | PTE_WRITE | PMD_ATTRINDX(MT_NORMAL))
@@ -45,17 +44,18 @@
 
 #define _PAGE_DEFAULT		(_PROT_DEFAULT | PTE_ATTRINDX(MT_NORMAL))
 
-#define _PAGE_KERNEL		(PROT_NORMAL)
-#define _PAGE_KERNEL_RO		((PROT_NORMAL & ~PTE_WRITE) | PTE_RDONLY)
-#define _PAGE_KERNEL_ROX	((PROT_NORMAL & ~(PTE_WRITE | PTE_PXN)) | PTE_RDONLY)
-#define _PAGE_KERNEL_EXEC	(PROT_NORMAL & ~PTE_PXN)
-#define _PAGE_KERNEL_EXEC_CONT	((PROT_NORMAL & ~PTE_PXN) | PTE_CONT)
+#define _PAGE_KERNEL_RWX		PROT_NORMAL
+// #define _PAGE_KERNEL_RO		((PROT_NORMAL & ~PTE_WRITE) | PTE_RDONLY)
+// #define _PAGE_KERNEL_ROX	((PROT_NORMAL & ~(PTE_WRITE | PTE_PXN)) | PTE_RDONLY)
+// #define _PAGE_KERNEL_EXEC	(PROT_NORMAL & ~PTE_PXN)
+#define _PAGE_KERNEL_EXEC_CONT	(PROT_NORMAL | PTE_CONT)
 
-#define _PAGE_SHARED		(_PAGE_DEFAULT | PTE_USER | PTE_RDONLY | PTE_NG | PTE_PXN | PTE_UXN | PTE_WRITE)
-#define _PAGE_SHARED_EXEC	(_PAGE_DEFAULT | PTE_USER | PTE_RDONLY | PTE_NG | PTE_PXN | PTE_WRITE)
-#define _PAGE_READONLY		(_PAGE_DEFAULT | PTE_USER | PTE_RDONLY | PTE_NG | PTE_PXN | PTE_UXN)
-#define _PAGE_READONLY_EXEC	(_PAGE_DEFAULT | PTE_USER | PTE_RDONLY | PTE_NG | PTE_PXN)
-#define _PAGE_EXECONLY		(_PAGE_DEFAULT | PTE_RDONLY | PTE_NG | PTE_PXN)
+// #define _PAGE_SHARED		(_PAGE_DEFAULT | PTE_NG | PTE_WRITE)
+// #define _PAGE_SHARED_EXEC	(_PAGE_DEFAULT | PTE_NG | PTE_WRITE)
+// #define _PAGE_READONLY		(_PAGE_DEFAULT | PTE_RDONLY | PTE_NG)
+// #define _PAGE_READONLY_EXEC	(_PAGE_DEFAULT | PTE_RDONLY | PTE_NG)
+// #define _PAGE_EXECONLY		(_PAGE_DEFAULT | PTE_RDONLY | PTE_NG)
+#define _PAGE_USR_RWX (_PAGE_DEFAULT | PTE_NG | PTE_WRITE)
 
 #ifdef __ASSEMBLY__
 #define PTE_MAYBE_NG	0
@@ -81,10 +81,13 @@ extern bool arm64_use_ng_mappings;
 #define PTE_MAYBE_GP		0
 #endif
 
-#define PAGE_KERNEL		__pgprot(_PAGE_KERNEL)
-#define PAGE_KERNEL_RO		__pgprot(_PAGE_KERNEL_RO)
-#define PAGE_KERNEL_ROX		__pgprot(_PAGE_KERNEL_ROX)
-#define PAGE_KERNEL_EXEC	__pgprot(_PAGE_KERNEL_EXEC)
+#define PAGE_KERNEL_RWX		__pgprot(_PAGE_KERNEL_RWX)
+#define PAGE_KERNEL PAGE_KERNEL_RWX //compact
+#define PAGE_KERNEL_EXEC PAGE_KERNEL_RWX //compact
+#define PAGE_KERNEL_RO PAGE_KERNEL_RWX //compact
+// #define PAGE_KERNEL_RO		__pgprot(_PAGE_KERNEL_RO)
+// #define PAGE_KERNEL_ROX		__pgprot(_PAGE_KERNEL_ROX)
+// #define PAGE_KERNEL_EXEC	__pgprot(_PAGE_KERNEL_EXEC)
 #define PAGE_KERNEL_EXEC_CONT	__pgprot(_PAGE_KERNEL_EXEC_CONT)
 
 #define PAGE_S2_MEMATTR(attr, has_fwb)					\
@@ -99,11 +102,12 @@ extern bool arm64_use_ng_mappings;
 
 #define PAGE_NONE		__pgprot(((_PAGE_DEFAULT) & ~PTE_VALID) | PTE_PROT_NONE | PTE_RDONLY | PTE_NG | PTE_PXN | PTE_UXN)
 /* shared+writable pages are clean by default, hence PTE_RDONLY|PTE_WRITE */
-#define PAGE_SHARED		__pgprot(_PAGE_SHARED)
-#define PAGE_SHARED_EXEC	__pgprot(_PAGE_SHARED_EXEC)
-#define PAGE_READONLY		__pgprot(_PAGE_READONLY)
-#define PAGE_READONLY_EXEC	__pgprot(_PAGE_READONLY_EXEC)
-#define PAGE_EXECONLY		__pgprot(_PAGE_EXECONLY)
+// #define PAGE_SHARED		__pgprot(_PAGE_SHARED)
+// #define PAGE_SHARED_EXEC	__pgprot(_PAGE_SHARED_EXEC)
+// #define PAGE_READONLY		__pgprot(_PAGE_READONLY)
+// #define PAGE_READONLY_EXEC	__pgprot(_PAGE_READONLY_EXEC)
+// #define PAGE_EXECONLY		__pgprot(_PAGE_EXECONLY)
+#define PAGE_USR_RWX __pgprot(_PAGE_USR_RWX)
 
 #endif /* __ASSEMBLY__ */
 
@@ -120,41 +124,7 @@ extern bool arm64_use_ng_mappings;
  * combinations we use on non-PIE systems with the same encoding, for
  * convenience these are listed here as comments as are the unallocated
  * encodings.
+ * Don't use fucking PIE!
  */
-
-/* 0: PAGE_DEFAULT                                                  */
-/* 1:                                                      PTE_USER */
-/* 2:                                          PTE_WRITE            */
-/* 3:                                          PTE_WRITE | PTE_USER */
-/* 4: PAGE_EXECONLY                  PTE_PXN                        */
-/* 5: PAGE_READONLY_EXEC             PTE_PXN |             PTE_USER */
-/* 6:                                PTE_PXN | PTE_WRITE            */
-/* 7: PAGE_SHARED_EXEC               PTE_PXN | PTE_WRITE | PTE_USER */
-/* 8: PAGE_KERNEL_ROX      PTE_UXN                                  */
-/* 9:                      PTE_UXN |                       PTE_USER */
-/* a: PAGE_KERNEL_EXEC     PTE_UXN |           PTE_WRITE            */
-/* b:                      PTE_UXN |           PTE_WRITE | PTE_USER */
-/* c: PAGE_KERNEL_RO       PTE_UXN | PTE_PXN                        */
-/* d: PAGE_READONLY        PTE_UXN | PTE_PXN |             PTE_USER */
-/* e: PAGE_KERNEL          PTE_UXN | PTE_PXN | PTE_WRITE            */
-/* f: PAGE_SHARED          PTE_UXN | PTE_PXN | PTE_WRITE | PTE_USER */
-
-#define PIE_E0	( \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_EXECONLY),      PIE_X_O) | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_READONLY_EXEC), PIE_RX)  | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_SHARED_EXEC),   PIE_RWX) | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_READONLY),      PIE_R)   | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_SHARED),        PIE_RW))
-
-#define PIE_E1	( \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_EXECONLY),      PIE_NONE_O) | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_READONLY_EXEC), PIE_R)      | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_SHARED_EXEC),   PIE_RW)     | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_READONLY),      PIE_R)      | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_SHARED),        PIE_RW)     | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_KERNEL_ROX),    PIE_RX)     | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_KERNEL_EXEC),   PIE_RWX)    | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_KERNEL_RO),     PIE_R)      | \
-	PIRx_ELx_PERM(pte_pi_index(_PAGE_KERNEL),        PIE_RW))
 
 #endif /* __ASM_PGTABLE_PROT_H */

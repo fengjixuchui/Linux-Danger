@@ -178,13 +178,13 @@ asmlinkage void __init early_fdt_map(u64 dt_phys)
 	int fdt_size;
 
 	early_fixmap_init();
-	early_fdt_ptr = fixmap_remap_fdt(dt_phys, &fdt_size, PAGE_KERNEL);
+	early_fdt_ptr = fixmap_remap_fdt(dt_phys, &fdt_size, PAGE_KERNEL_RWX);
 }
 
 static void __init setup_machine_fdt(phys_addr_t dt_phys)
 {
 	int size;
-	void *dt_virt = fixmap_remap_fdt(dt_phys, &size, PAGE_KERNEL);
+	void *dt_virt = fixmap_remap_fdt(dt_phys, &size, PAGE_KERNEL_RWX);
 	const char *name;
 
 	if (dt_virt)
@@ -206,8 +206,8 @@ static void __init setup_machine_fdt(phys_addr_t dt_phys)
 			cpu_relax();
 	}
 
-	/* Early fixups are done, map the FDT as read-only now */
-	fixmap_remap_fdt(dt_phys, &size, PAGE_KERNEL_RO);
+	/* Early fixups are done, map the FDT as rwx now */
+	fixmap_remap_fdt(dt_phys, &size, PAGE_KERNEL_RWX);
 
 	name = of_flat_dt_get_machine_name();
 	if (!name)

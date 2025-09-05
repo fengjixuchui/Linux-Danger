@@ -458,7 +458,7 @@ SYM_FUNC_START(__cpu_setup)
 	mrs_s	x1, SYS_ID_AA64MMFR3_EL1
 	ubfx	x1, x1, #ID_AA64MMFR3_EL1_S1PIE_SHIFT, #4
 	cbz	x1, .Lskip_indirection
-
+	/*
 	mov_q	x0, PIE_E0
 	msr	REG_PIRE0_EL1, x0
 	mov_q	x0, PIE_E1
@@ -466,6 +466,7 @@ SYM_FUNC_START(__cpu_setup)
 
 	mov	x0, TCR2_EL1x_PIE
 	msr	REG_TCR2_EL1, x0
+	*/
 
 .Lskip_indirection:
 

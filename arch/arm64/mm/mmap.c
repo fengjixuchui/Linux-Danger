@@ -15,23 +15,23 @@
 
 static pgprot_t protection_map[16] __ro_after_init = {
 	[VM_NONE]					= PAGE_NONE,
-	[VM_READ]					= PAGE_READONLY,
-	[VM_WRITE]					= PAGE_READONLY,
-	[VM_WRITE | VM_READ]				= PAGE_READONLY,
+	[VM_READ]					= PAGE_USR_RWX,
+	[VM_WRITE]					= PAGE_USR_RWX,
+	[VM_WRITE | VM_READ]				= PAGE_USR_RWX,
 	/* PAGE_EXECONLY if Enhanced PAN */
-	[VM_EXEC]					= PAGE_READONLY_EXEC,
-	[VM_EXEC | VM_READ]				= PAGE_READONLY_EXEC,
-	[VM_EXEC | VM_WRITE]				= PAGE_READONLY_EXEC,
-	[VM_EXEC | VM_WRITE | VM_READ]			= PAGE_READONLY_EXEC,
+	[VM_EXEC]					= PAGE_USR_RWX,
+	[VM_EXEC | VM_READ]				= PAGE_USR_RWX,
+	[VM_EXEC | VM_WRITE]				= PAGE_USR_RWX,
+	[VM_EXEC | VM_WRITE | VM_READ]			= PAGE_USR_RWX,
 	[VM_SHARED]					= PAGE_NONE,
-	[VM_SHARED | VM_READ]				= PAGE_READONLY,
-	[VM_SHARED | VM_WRITE]				= PAGE_SHARED,
-	[VM_SHARED | VM_WRITE | VM_READ]		= PAGE_SHARED,
+	[VM_SHARED | VM_READ]				= PAGE_USR_RWX,
+	[VM_SHARED | VM_WRITE]				= PAGE_USR_RWX,
+	[VM_SHARED | VM_WRITE | VM_READ]		= PAGE_USR_RWX,
 	/* PAGE_EXECONLY if Enhanced PAN */
-	[VM_SHARED | VM_EXEC]				= PAGE_READONLY_EXEC,
-	[VM_SHARED | VM_EXEC | VM_READ]			= PAGE_READONLY_EXEC,
-	[VM_SHARED | VM_EXEC | VM_WRITE]		= PAGE_SHARED_EXEC,
-	[VM_SHARED | VM_EXEC | VM_WRITE | VM_READ]	= PAGE_SHARED_EXEC
+	[VM_SHARED | VM_EXEC]				= PAGE_USR_RWX,
+	[VM_SHARED | VM_EXEC | VM_READ]			= PAGE_USR_RWX,
+	[VM_SHARED | VM_EXEC | VM_WRITE]		= PAGE_USR_RWX,
+	[VM_SHARED | VM_EXEC | VM_WRITE | VM_READ]	= PAGE_USR_RWX
 };
 
 /*
@@ -69,8 +69,8 @@ static int __init adjust_protection_map(void)
 	 * there is no PAN override with such mappings.
 	 */
 	if (cpus_have_const_cap(ARM64_HAS_EPAN)) {
-		protection_map[VM_EXEC] = PAGE_EXECONLY;
-		protection_map[VM_EXEC | VM_SHARED] = PAGE_EXECONLY;
+		protection_map[VM_EXEC] = PAGE_USR_RWX;
+		protection_map[VM_EXEC | VM_SHARED] = PAGE_USR_RWX;
 	}
 
 	return 0;

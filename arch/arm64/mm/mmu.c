@@ -506,7 +506,7 @@ void __init mark_linear_text_alias_ro(void)
 	 */
 	update_mapping_prot(__pa_symbol(_stext), (unsigned long)lm_alias(_stext),
 			    (unsigned long)__init_begin - (unsigned long)_stext,
-			    PAGE_KERNEL_RO);
+			    PAGE_KERNEL_RWX);
 }
 
 #ifdef CONFIG_KFENCE
@@ -551,7 +551,7 @@ static void __init arm64_kfence_map_pool(phys_addr_t kfence_pool, pgd_t *pgdp)
 
 	/* KFENCE pool needs page-level mapping. */
 	__map_memblock(pgdp, kfence_pool, kfence_pool + KFENCE_POOL_SIZE,
-			pgprot_tagged(PAGE_KERNEL),
+			pgprot_tagged(PAGE_KERNEL_RWX),
 			NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS);
 	memblock_clear_nomap(kfence_pool, KFENCE_POOL_SIZE);
 	__kfence_pool = phys_to_virt(kfence_pool);
@@ -604,7 +604,7 @@ static void __init map_mem(pgd_t *pgdp)
 		 * if MTE is present. Otherwise, it has the same attributes as
 		 * PAGE_KERNEL.
 		 */
-		__map_memblock(pgdp, start, end, pgprot_tagged(PAGE_KERNEL),
+		__map_memblock(pgdp, start, end, pgprot_tagged(PAGE_KERNEL_RWX),
 			       flags);
 	}
 
@@ -619,7 +619,7 @@ static void __init map_mem(pgd_t *pgdp)
 	 * so we should avoid them here.
 	 */
 	__map_memblock(pgdp, kernel_start, kernel_end,
-		       PAGE_KERNEL, NO_CONT_MAPPINGS);
+		       PAGE_KERNEL_RWX, NO_CONT_MAPPINGS);
 	memblock_clear_nomap(kernel_start, kernel_end - kernel_start);
 	arm64_kfence_map_pool(early_kfence_pool, pgdp);
 }
@@ -634,7 +634,7 @@ void mark_rodata_ro(void)
 	 */
 	section_size = (unsigned long)__init_begin - (unsigned long)__start_rodata;
 	update_mapping_prot(__pa_symbol(__start_rodata), (unsigned long)__start_rodata,
-			    section_size, PAGE_KERNEL_RO);
+			    section_size, PAGE_KERNEL_RWX);
 
 	debug_checkwx();
 }
@@ -666,7 +666,7 @@ static void __init map_kernel_segment(pgd_t *pgdp, void *va_start, void *va_end,
 
 static pgprot_t kernel_exec_prot(void)
 {
-	return rodata_enabled ? PAGE_KERNEL_ROX : PAGE_KERNEL_EXEC;
+	return PAGE_KERNEL_RWX;
 }
 
 #ifdef CONFIG_UNMAP_KERNEL_AT_EL0
@@ -693,7 +693,7 @@ static int __init map_entry_trampoline(void)
 
 	if (IS_ENABLED(CONFIG_RELOCATABLE))
 		__set_fixmap(FIX_ENTRY_TRAMP_TEXT1 - i,
-			     pa_start + i * PAGE_SIZE, PAGE_KERNEL_RO);
+			     pa_start + i * PAGE_SIZE, PAGE_KERNEL_RWX);
 
 	return 0;
 }
@@ -745,13 +745,13 @@ static void __init map_kernel(pgd_t *pgdp)
 	 */
 	map_kernel_segment(pgdp, _stext, _etext, text_prot, &vmlinux_text, 0,
 			   VM_NO_GUARD);
-	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL,
+	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL_RWX,
 			   &vmlinux_rodata, NO_CONT_MAPPINGS, VM_NO_GUARD);
 	map_kernel_segment(pgdp, __inittext_begin, __inittext_end, text_prot,
 			   &vmlinux_inittext, 0, VM_NO_GUARD);
-	map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL,
+	map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL_RWX,
 			   &vmlinux_initdata, 0, VM_NO_GUARD);
-	map_kernel_segment(pgdp, _data, _end, PAGE_KERNEL, &vmlinux_data, 0, 0);
+	map_kernel_segment(pgdp, _data, _end, PAGE_KERNEL_RWX, &vmlinux_data, 0, 0);
 
 	fixmap_copy(pgdp);
 	kasan_copy_shadow(pgdp);
@@ -771,7 +771,7 @@ static void __init create_idmap(void)
 			__pgd(pgd_phys | P4D_TYPE_TABLE));
 		pgd = __va(pgd_phys);
 	}
-	__create_pgd_mapping(pgd, start, start, size, PAGE_KERNEL_ROX,
+	__create_pgd_mapping(pgd, start, start, size, PAGE_KERNEL_RWX,
 			     early_pgtable_alloc, 0);
 
 	if (IS_ENABLED(CONFIG_UNMAP_KERNEL_AT_EL0)) {
@@ -782,7 +782,7 @@ static void __init create_idmap(void)
 		 * The KPTI G-to-nG conversion code needs a read-write mapping
 		 * of its synchronization flag in the ID map.
 		 */
-		__create_pgd_mapping(pgd, pa, pa, sizeof(u32), PAGE_KERNEL,
+		__create_pgd_mapping(pgd, pa, pa, sizeof(u32), PAGE_KERNEL_RWX,
 				     early_pgtable_alloc, 0);
 	}
 }

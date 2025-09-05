@@ -123,7 +123,7 @@ void *module_alloc(unsigned long size)
 					 module_direct_base,
 					 module_direct_base + SZ_128M,
 					 GFP_KERNEL | __GFP_NOWARN,
-					 PAGE_KERNEL, 0, NUMA_NO_NODE,
+					 PAGE_KERNEL_RWX, 0, NUMA_NO_NODE,
 					 __builtin_return_address(0));
 	}
 
@@ -132,7 +132,7 @@ void *module_alloc(unsigned long size)
 					 module_plt_base,
 					 module_plt_base + SZ_2G,
 					 GFP_KERNEL | __GFP_NOWARN,
-					 PAGE_KERNEL, 0, NUMA_NO_NODE,
+					 PAGE_KERNEL_RWX, 0, NUMA_NO_NODE,
 					 __builtin_return_address(0));
 	}
 

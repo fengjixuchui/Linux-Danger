@@ -1814,7 +1814,7 @@ kpti_install_ng_mappings(const struct arm64_cpu_capabilities *__unused)
 		// to be used as a ad-hoc fixmap.
 		//
 		create_kpti_ng_temp_pgd(kpti_ng_temp_pgd, __pa(alloc),
-					KPTI_NG_TEMP_VA, PAGE_SIZE, PAGE_KERNEL,
+					KPTI_NG_TEMP_VA, PAGE_SIZE, PAGE_KERNEL_RWX,
 					kpti_ng_pgd_alloc, 0);
 	}
 

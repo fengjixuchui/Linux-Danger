@@ -48,27 +48,27 @@ static __init pteval_t create_mapping_protection(efi_memory_desc_t *md)
 		 */
 		code_is_misaligned |= (type == EFI_RUNTIME_SERVICES_CODE);
 
-		return code_is_misaligned ? pgprot_val(PAGE_KERNEL_EXEC)
-					  : pgprot_val(PAGE_KERNEL);
+		return code_is_misaligned ? pgprot_val(PAGE_KERNEL_RWX)
+					  : pgprot_val(PAGE_KERNEL_RWX);
 	}
 
 	/* R-- */
 	if ((attr & (EFI_MEMORY_XP | EFI_MEMORY_RO)) ==
 	    (EFI_MEMORY_XP | EFI_MEMORY_RO))
-		return pgprot_val(PAGE_KERNEL_RO);
+		return pgprot_val(PAGE_KERNEL_RWX);
 
 	/* R-X */
 	if (attr & EFI_MEMORY_RO)
-		return pgprot_val(PAGE_KERNEL_ROX);
+		return pgprot_val(PAGE_KERNEL_RWX);
 
 	/* RW- */
 	if (((attr & (EFI_MEMORY_RP | EFI_MEMORY_WP | EFI_MEMORY_XP)) ==
 	     EFI_MEMORY_XP) ||
 	    type != EFI_RUNTIME_SERVICES_CODE)
-		return pgprot_val(PAGE_KERNEL);
+		return pgprot_val(PAGE_KERNEL_RWX);
 
 	/* RWX */
-	return pgprot_val(PAGE_KERNEL_EXEC);
+	return pgprot_val(PAGE_KERNEL_RWX);
 }
 
 /* we will fill this structure from the stub, so don't put it in .bss */
