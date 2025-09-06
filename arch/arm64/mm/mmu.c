@@ -664,9 +664,9 @@ static void __init map_kernel_segment(pgd_t *pgdp, void *va_start, void *va_end,
 	vm_area_add_early(vma);
 }
 
-static pgprot_t kernel_exec_prot(void)
+static __inline pgprot_t kernel_exec_prot(void)
 {
-	return rodata_enabled ? PAGE_KERNEL_ROX : PAGE_KERNEL_EXEC;
+	return PAGE_KERNEL_RWX;
 }
 
 #ifdef CONFIG_UNMAP_KERNEL_AT_EL0

@@ -152,6 +152,7 @@ trace_exit:
 
 void do_el0_svc(struct pt_regs *regs)
 {
+	//pr_alert("do_el0_svc: pc=0x%llx, syscallno=%lld\n", regs->pc, regs->regs[8]);
 	el0_svc_common(regs, regs->regs[8], __NR_syscalls, sys_call_table);
 }
 

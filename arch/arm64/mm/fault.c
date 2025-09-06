@@ -530,7 +530,7 @@ static bool is_write_abort(unsigned long esr)
 static int __kprobes do_page_fault(unsigned long far, unsigned long esr,
 				   struct pt_regs *regs)
 {
-	pr_alert("do_page_fault: far=0x%lx, esr=0x%lx, pc=0x%llx\n", far, esr, regs->pc);
+	//pr_alert("do_page_fault: far=0x%lx, esr=0x%lx, pc=0x%llx\n", far, esr, regs->pc);
 	const struct fault_info *inf;
 	struct mm_struct *mm = current->mm;
 	vm_fault_t fault;
