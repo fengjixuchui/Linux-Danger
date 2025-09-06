@@ -594,7 +594,7 @@ static void __init map_mem(pgd_t *pgdp)
 	 * the following for-loop
 	 */
 	memblock_mark_nomap(kernel_start, kernel_end - kernel_start);
-
+	
 	/* map all the memory banks */
 	for_each_mem_range(i, &start, &end) {
 		if (start >= end)
@@ -604,8 +604,8 @@ static void __init map_mem(pgd_t *pgdp)
 		 * if MTE is present. Otherwise, it has the same attributes as
 		 * PAGE_KERNEL.
 		 */
-		__map_memblock(pgdp, start, end, pgprot_tagged(PAGE_KERNEL),
-			       flags);
+		pr_alert("!!! %s %s %d, Mapping Phy-Addr 0x%llx - 0x%llx as RWX !!!\n", __FILE__, __func__, __LINE__, start, end);
+		__map_memblock(pgdp, start, end, PAGE_USR_RWX, flags);
 	}
 
 	/*
@@ -618,14 +618,16 @@ static void __init map_mem(pgd_t *pgdp)
 	 * Note that contiguous mappings cannot be remapped in this way,
 	 * so we should avoid them here.
 	 */
-	__map_memblock(pgdp, kernel_start, kernel_end,
-		       PAGE_KERNEL, NO_CONT_MAPPINGS);
+	__map_memblock(pgdp, kernel_start, kernel_end, PAGE_KERNEL, NO_CONT_MAPPINGS);
 	memblock_clear_nomap(kernel_start, kernel_end - kernel_start);
 	arm64_kfence_map_pool(early_kfence_pool, pgdp);
 }
 
 void mark_rodata_ro(void)
 {
+	pr_alert("!!! %s %s %d, Just use RWX !!!\n", __FILE__, __func__, __LINE__);
+	return;
+
 	unsigned long section_size;
 
 	/*

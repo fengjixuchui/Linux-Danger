@@ -42,11 +42,6 @@
 #define PROT_SECT_NORMAL	(PROT_SECT_DEFAULT | PMD_SECT_PXN | PMD_SECT_UXN | PTE_WRITE | PMD_ATTRINDX(MT_NORMAL))
 #define PROT_SECT_NORMAL_EXEC	(PROT_SECT_DEFAULT | PMD_SECT_UXN | PMD_ATTRINDX(MT_NORMAL))
 
-#define _PAGE_KERNEL_RWX		PROT_NORMAL
-#define _PAGE_KERNEL_EXEC_CONT	(PROT_NORMAL | PTE_CONT)
-
-#define _PAGE_USR_RWX (PROT_NORMAL | PTE_USER | PTE_NG)
-
 #ifdef __ASSEMBLY__
 #define PTE_MAYBE_NG	0
 #endif
@@ -71,12 +66,12 @@ extern bool arm64_use_ng_mappings;
 #define PTE_MAYBE_GP		0
 #endif
 
-#define PAGE_KERNEL_RWX		__pgprot(_PAGE_KERNEL_RWX)
+#define PAGE_KERNEL_RWX		__pgprot(PROT_NORMAL)
 #define PAGE_KERNEL PAGE_KERNEL_RWX //compact
 #define PAGE_KERNEL_EXEC PAGE_KERNEL_RWX //compact
 #define PAGE_KERNEL_RO PAGE_KERNEL_RWX //compact
 #define PAGE_KERNEL_ROX PAGE_KERNEL_RWX //compact
-#define PAGE_KERNEL_EXEC_CONT	__pgprot(_PAGE_KERNEL_EXEC_CONT)
+#define PAGE_KERNEL_EXEC_CONT	__pgprot(PROT_NORMAL | PTE_CONT)
 
 #define PAGE_S2_MEMATTR(attr, has_fwb)					\
 	({								\
@@ -89,10 +84,10 @@ extern bool arm64_use_ng_mappings;
 	 })
 
 #define PAGE_NONE		__pgprot(PROT_NORMAL & ~PTE_VALID)
-#define PAGE_USR_RWX __pgprot(_PAGE_USR_RWX)
+#define PAGE_USR_RWX __pgprot(PROT_NORMAL | PTE_USER | PTE_NG)
 #define PAGE_SHARED PAGE_USR_RWX //compact
 #define PAGE_SHARED_EXEC PAGE_USR_RWX //compact
-#define PAGE_READONLY __pgprot(_PAGE_USR_RWX | PTE_RDONLY) //compact
+#define PAGE_READONLY __pgprot(PROT_NORMAL | PTE_USER | PTE_NG | PTE_RDONLY) //compact
 #define PAGE_READONLY_EXEC PAGE_USR_RWX //compact
 #define PAGE_EXECONLY PAGE_USR_RWX //compact
 
