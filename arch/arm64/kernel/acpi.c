@@ -259,7 +259,7 @@ pgprot_t __acpi_get_mem_attribute(phys_addr_t addr)
 
 	attr = efi_mem_attributes(addr);
 	if (attr & EFI_MEMORY_WB)
-		return PAGE_KERNEL_RWX;
+		return PAGE_KERNEL;
 	if (attr & EFI_MEMORY_WC)
 		return __pgprot(PROT_NORMAL_NC);
 	if (attr & EFI_MEMORY_WT)
@@ -326,7 +326,7 @@ void __iomem *acpi_os_ioremap(acpi_physical_address phys, acpi_size size)
 			 * as long as we take care not to create a writable
 			 * mapping for executable code.
 			 */
-			prot = PAGE_KERNEL_RWX;
+			prot = PAGE_KERNEL_RO;
 			break;
 
 		case EFI_ACPI_RECLAIM_MEMORY:
@@ -345,7 +345,7 @@ void __iomem *acpi_os_ioremap(acpi_physical_address phys, acpi_size size)
 
 		default:
 			if (region->attribute & EFI_MEMORY_WB)
-				prot = PAGE_KERNEL_RWX;
+				prot = PAGE_KERNEL;
 			else if (region->attribute & EFI_MEMORY_WC)
 				prot = __pgprot(PROT_NORMAL_NC);
 			else if (region->attribute & EFI_MEMORY_WT)

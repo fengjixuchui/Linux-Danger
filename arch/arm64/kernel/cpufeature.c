@@ -1814,7 +1814,7 @@ kpti_install_ng_mappings(const struct arm64_cpu_capabilities *__unused)
 		// to be used as a ad-hoc fixmap.
 		//
 		create_kpti_ng_temp_pgd(kpti_ng_temp_pgd, __pa(alloc),
-					KPTI_NG_TEMP_VA, PAGE_SIZE, PAGE_KERNEL_RWX,
+					KPTI_NG_TEMP_VA, PAGE_SIZE, PAGE_KERNEL,
 					kpti_ng_pgd_alloc, 0);
 	}
 
@@ -2032,10 +2032,10 @@ static void cpu_enable_pan(const struct arm64_cpu_capabilities *__unused)
 	 * We modify PSTATE. This won't work from irq context as the PSTATE
 	 * is discarded once we return from the exception.
 	 */
-	WARN_ON_ONCE(in_interrupt());
-
-	sysreg_clear_set(sctlr_el1, SCTLR_EL1_SPAN, 0);
-	set_pstate_pan(1);
+	pr_alert("!!! %s %s %d, disable fucking pan !!!!\n", __FILE__, __func__, __LINE__);
+	//WARN_ON_ONCE(in_interrupt());
+	// sysreg_clear_set(sctlr_el1, SCTLR_EL1_SPAN, 0);
+	// set_pstate_pan(1);
 }
 #endif /* CONFIG_ARM64_PAN */
 

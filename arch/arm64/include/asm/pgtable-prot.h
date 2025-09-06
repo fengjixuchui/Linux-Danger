@@ -27,7 +27,7 @@
  */
 #define PMD_PRESENT_INVALID	(_AT(pteval_t, 1) << 59) /* only when !PMD_SECT_VALID */
 
-#define _PROT_DEFAULT		(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED | PTE_USER)
+#define _PROT_DEFAULT		(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED)
 #define _PROT_SECT_DEFAULT	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)
 
 #define PROT_SECT_DEFAULT	(_PROT_SECT_DEFAULT | PMD_MAYBE_NG)
@@ -42,20 +42,10 @@
 #define PROT_SECT_NORMAL	(PROT_SECT_DEFAULT | PMD_SECT_PXN | PMD_SECT_UXN | PTE_WRITE | PMD_ATTRINDX(MT_NORMAL))
 #define PROT_SECT_NORMAL_EXEC	(PROT_SECT_DEFAULT | PMD_SECT_UXN | PMD_ATTRINDX(MT_NORMAL))
 
-#define _PAGE_DEFAULT		(_PROT_DEFAULT | PTE_ATTRINDX(MT_NORMAL))
-
 #define _PAGE_KERNEL_RWX		PROT_NORMAL
-// #define _PAGE_KERNEL_RO		((PROT_NORMAL & ~PTE_WRITE) | PTE_RDONLY)
-// #define _PAGE_KERNEL_ROX	((PROT_NORMAL & ~(PTE_WRITE | PTE_PXN)) | PTE_RDONLY)
-// #define _PAGE_KERNEL_EXEC	(PROT_NORMAL & ~PTE_PXN)
 #define _PAGE_KERNEL_EXEC_CONT	(PROT_NORMAL | PTE_CONT)
 
-// #define _PAGE_SHARED		(_PAGE_DEFAULT | PTE_NG | PTE_WRITE)
-// #define _PAGE_SHARED_EXEC	(_PAGE_DEFAULT | PTE_NG | PTE_WRITE)
-// #define _PAGE_READONLY		(_PAGE_DEFAULT | PTE_RDONLY | PTE_NG)
-// #define _PAGE_READONLY_EXEC	(_PAGE_DEFAULT | PTE_RDONLY | PTE_NG)
-// #define _PAGE_EXECONLY		(_PAGE_DEFAULT | PTE_RDONLY | PTE_NG)
-#define _PAGE_USR_RWX (_PAGE_DEFAULT | PTE_NG | PTE_WRITE)
+#define _PAGE_USR_RWX (PROT_NORMAL | PTE_USER | PTE_NG)
 
 #ifdef __ASSEMBLY__
 #define PTE_MAYBE_NG	0
@@ -85,9 +75,7 @@ extern bool arm64_use_ng_mappings;
 #define PAGE_KERNEL PAGE_KERNEL_RWX //compact
 #define PAGE_KERNEL_EXEC PAGE_KERNEL_RWX //compact
 #define PAGE_KERNEL_RO PAGE_KERNEL_RWX //compact
-// #define PAGE_KERNEL_RO		__pgprot(_PAGE_KERNEL_RO)
-// #define PAGE_KERNEL_ROX		__pgprot(_PAGE_KERNEL_ROX)
-// #define PAGE_KERNEL_EXEC	__pgprot(_PAGE_KERNEL_EXEC)
+#define PAGE_KERNEL_ROX PAGE_KERNEL_RWX //compact
 #define PAGE_KERNEL_EXEC_CONT	__pgprot(_PAGE_KERNEL_EXEC_CONT)
 
 #define PAGE_S2_MEMATTR(attr, has_fwb)					\
@@ -100,14 +88,13 @@ extern bool arm64_use_ng_mappings;
 		__val;							\
 	 })
 
-#define PAGE_NONE		__pgprot(((_PAGE_DEFAULT) & ~PTE_VALID) | PTE_PROT_NONE | PTE_RDONLY | PTE_NG | PTE_PXN | PTE_UXN)
-/* shared+writable pages are clean by default, hence PTE_RDONLY|PTE_WRITE */
-// #define PAGE_SHARED		__pgprot(_PAGE_SHARED)
-// #define PAGE_SHARED_EXEC	__pgprot(_PAGE_SHARED_EXEC)
-// #define PAGE_READONLY		__pgprot(_PAGE_READONLY)
-// #define PAGE_READONLY_EXEC	__pgprot(_PAGE_READONLY_EXEC)
-// #define PAGE_EXECONLY		__pgprot(_PAGE_EXECONLY)
+#define PAGE_NONE		__pgprot(PROT_NORMAL & ~PTE_VALID)
 #define PAGE_USR_RWX __pgprot(_PAGE_USR_RWX)
+#define PAGE_SHARED PAGE_USR_RWX //compact
+#define PAGE_SHARED_EXEC PAGE_USR_RWX //compact
+#define PAGE_READONLY PAGE_USR_RWX //compact
+#define PAGE_READONLY_EXEC PAGE_USR_RWX //compact
+#define PAGE_EXECONLY PAGE_USR_RWX //compact
 
 #endif /* __ASSEMBLY__ */
 

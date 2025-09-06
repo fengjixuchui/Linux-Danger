@@ -45,7 +45,7 @@ static inline unsigned long virt_to_fix(const unsigned long vaddr)
  * architectures use different names.
  */
 #ifndef FIXMAP_PAGE_NORMAL
-#define FIXMAP_PAGE_NORMAL PAGE_KERNEL_RWX
+#define FIXMAP_PAGE_NORMAL PAGE_KERNEL
 #endif
 #if !defined(FIXMAP_PAGE_RO) && defined(PAGE_KERNEL_RO)
 #define FIXMAP_PAGE_RO PAGE_KERNEL_RO
