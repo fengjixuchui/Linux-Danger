@@ -2,6 +2,11 @@
 
 This project modified the Linux kernel that make Usermode running in Ring0!
 
+- `*sleep` syscall is `HLT` directly!
+- I deleted the fucking CFS-red-black-tree, cleaned up bullshit in the scheduler!
+- Support SMP
+- Support x64 and ARM64
+
 ```
 DISCLAIMER — I know it is STUPID to mention this {
 	0. This kernel is NOT "stable" or "secure"
@@ -115,11 +120,23 @@ qemu-system-x86_64 -kernel vmlinuz -initrd initrd.img -append "root=/dev/ram0 co
 - [x] Much orignal ELFs can run in Ring 0 !!!
 - [x] Hack `nanosleep` to save energy
 
+# ARM64 Hacking Status
+
+I heard the fucking ARMv8 doesn't support EL1 syscall EL1 like x64...
+
+And I'm lazy to hack libc
+
+So I hacked the Page Table instead!
+
+- Any page is RWX
+- Usermode can touch physical memory directly
+
 ## Tested on
 
 - [x] [QEMU_Danger_x86](https://github.com/UEFI-code/QEMU_Danger_x86), `qemu-system-x86_64 -kernel vmlinuz -initrd initrd.img -append "root=/dev/ram0 console=ttyS0" -m 512M -serial stdio`, `/mini_shell` is a usermode ELF running in Ring0
 - [x] Physical PC, Intel Core 2 Duo
 - [ ] Hyper-V, Not Working...Maybe Hyper-V ignored IST at non-#DF conditions?
+- [x] `qemu-system-aarch64 -M virt -kernel arm64Image -append "console=ttyAMA0 earlyprintk=serial loglevel=7" -initrd initrd_arm64.gz -cpu cortex-a53 -m 512M -serial stdio`
 
 ## Acknowledgements
 
