@@ -4,6 +4,7 @@
  *
  * Copyright (C) 1995-2005 Russell King
  * Copyright (C) 2012 ARM Ltd.
+ * Copyright (C) 2025 SuperHacker UEFI
  */
 
 #include <linux/cache.h>
@@ -594,7 +595,7 @@ static void __init map_mem(pgd_t *pgdp)
 	 * the following for-loop
 	 */
 	memblock_mark_nomap(kernel_start, kernel_end - kernel_start);
-	
+
 	/* map all the memory banks */
 	for_each_mem_range(i, &start, &end) {
 		if (start >= end)
@@ -666,17 +667,12 @@ static void __init map_kernel_segment(pgd_t *pgdp, void *va_start, void *va_end,
 	vm_area_add_early(vma);
 }
 
-static __inline pgprot_t kernel_exec_prot(void)
-{
-	return PAGE_KERNEL_RWX;
-}
-
 #ifdef CONFIG_UNMAP_KERNEL_AT_EL0
 static int __init map_entry_trampoline(void)
 {
 	int i;
 
-	pgprot_t prot = kernel_exec_prot();
+	pgprot_t prot = PAGE_KERNEL_RWX;
 	phys_addr_t pa_start = __pa_symbol(__entry_tramp_text_start);
 
 	/* The trampoline is always mapped and can therefore be global */
@@ -703,57 +699,25 @@ core_initcall(map_entry_trampoline);
 #endif
 
 /*
- * Open coded check for BTI, only for use to determine configuration
- * for early mappings for before the cpufeature code has run.
- */
-static bool arm64_early_this_cpu_has_bti(void)
-{
-	u64 pfr1;
-
-	if (!IS_ENABLED(CONFIG_ARM64_BTI_KERNEL))
-		return false;
-
-	pfr1 = __read_sysreg_by_encoding(SYS_ID_AA64PFR1_EL1);
-	return cpuid_feature_extract_unsigned_field(pfr1,
-						    ID_AA64PFR1_EL1_BT_SHIFT);
-}
-
-/*
  * Create fine-grained mappings for the kernel.
  */
 static void __init map_kernel(pgd_t *pgdp)
 {
 	static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_inittext,
 				vmlinux_initdata, vmlinux_data;
-
-	/*
-	 * External debuggers may need to write directly to the text
-	 * mapping to install SW breakpoints. Allow this (only) when
-	 * explicitly requested with rodata=off.
-	 */
-	pgprot_t text_prot = kernel_exec_prot();
-
-	/*
-	 * If we have a CPU that supports BTI and a kernel built for
-	 * BTI then mark the kernel executable text as guarded pages
-	 * now so we don't have to rewrite the page tables later.
-	 */
-	if (arm64_early_this_cpu_has_bti())
-		text_prot = __pgprot_modify(text_prot, PTE_GP, PTE_GP);
-
 	/*
 	 * Only rodata will be remapped with different permissions later on,
 	 * all other segments are allowed to use contiguous mappings.
 	 */
-	map_kernel_segment(pgdp, _stext, _etext, text_prot, &vmlinux_text, 0,
+	map_kernel_segment(pgdp, _stext, _etext, PAGE_KERNEL_RWX, &vmlinux_text, 0,
 			   VM_NO_GUARD);
-	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL,
+	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL_RWX,
 			   &vmlinux_rodata, NO_CONT_MAPPINGS, VM_NO_GUARD);
-	map_kernel_segment(pgdp, __inittext_begin, __inittext_end, text_prot,
+	map_kernel_segment(pgdp, __inittext_begin, __inittext_end, PAGE_KERNEL_RWX,
 			   &vmlinux_inittext, 0, VM_NO_GUARD);
-	map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL,
+	map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL_RWX,
 			   &vmlinux_initdata, 0, VM_NO_GUARD);
-	map_kernel_segment(pgdp, _data, _end, PAGE_KERNEL, &vmlinux_data, 0, 0);
+	map_kernel_segment(pgdp, _data, _end, PAGE_KERNEL_RWX, &vmlinux_data, 0, 0);
 
 	fixmap_copy(pgdp);
 	kasan_copy_shadow(pgdp);
@@ -773,7 +737,7 @@ static void __init create_idmap(void)
 			__pgd(pgd_phys | P4D_TYPE_TABLE));
 		pgd = __va(pgd_phys);
 	}
-	__create_pgd_mapping(pgd, start, start, size, PAGE_KERNEL_ROX,
+	__create_pgd_mapping(pgd, start, start, size, PAGE_KERNEL_RWX,
 			     early_pgtable_alloc, 0);
 
 	if (IS_ENABLED(CONFIG_UNMAP_KERNEL_AT_EL0)) {
@@ -784,7 +748,7 @@ static void __init create_idmap(void)
 		 * The KPTI G-to-nG conversion code needs a read-write mapping
 		 * of its synchronization flag in the ID map.
 		 */
-		__create_pgd_mapping(pgd, pa, pa, sizeof(u32), PAGE_KERNEL,
+		__create_pgd_mapping(pgd, pa, pa, sizeof(u32), PAGE_KERNEL_RWX,
 				     early_pgtable_alloc, 0);
 	}
 }

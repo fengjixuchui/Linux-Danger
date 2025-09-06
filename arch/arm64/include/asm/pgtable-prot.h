@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (C) 2016 ARM Ltd.
+ * Copyright (C) 2025 SuperHacker UEFI
  */
 #ifndef __ASM_PGTABLE_PROT_H
 #define __ASM_PGTABLE_PROT_H
