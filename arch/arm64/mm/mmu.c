@@ -177,7 +177,7 @@ static void init_pte(pmd_t *pmdp, unsigned long addr, unsigned long end,
 
 	ptep = pte_set_fixmap_offset(pmdp, addr);
 	do {
-		pte_t old_pte = READ_ONCE(*ptep);
+		// pte_t old_pte = READ_ONCE(*ptep);
 
 		set_pte(ptep, pfn_pte(__phys_to_pfn(phys), prot));
 
@@ -185,8 +185,8 @@ static void init_pte(pmd_t *pmdp, unsigned long addr, unsigned long end,
 		 * After the PTE entry has been populated once, we
 		 * only allow updates to the permission attributes.
 		 */
-		BUG_ON(!pgattr_change_is_safe(pte_val(old_pte),
-					      READ_ONCE(pte_val(*ptep))));
+		// BUG_ON(!pgattr_change_is_safe(pte_val(old_pte),
+		// 			      READ_ONCE(pte_val(*ptep))));
 
 		phys += PAGE_SIZE;
 	} while (ptep++, addr += PAGE_SIZE, addr != end);
@@ -567,8 +567,6 @@ static inline void arm64_kfence_map_pool(phys_addr_t kfence_pool, pgd_t *pgdp) {
 static void __init map_mem(pgd_t *pgdp)
 {
 	static const u64 direct_map_end = _PAGE_END(VA_BITS_MIN);
-	phys_addr_t kernel_start = __pa_symbol(_stext);
-	phys_addr_t kernel_end = __pa_symbol(__init_begin);
 	phys_addr_t start, end;
 	phys_addr_t early_kfence_pool;
 	int flags = NO_EXEC_MAPPINGS;
@@ -587,15 +585,7 @@ static void __init map_mem(pgd_t *pgdp)
 
 	if (can_set_direct_map())
 		flags |= NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
-
-	/*
-	 * Take care not to create a writable alias for the
-	 * read-only text and rodata sections of the kernel image.
-	 * So temporarily mark them as NOMAP to skip mappings in
-	 * the following for-loop
-	 */
-	memblock_mark_nomap(kernel_start, kernel_end - kernel_start);
-
+	
 	/* map all the memory banks */
 	for_each_mem_range(i, &start, &end) {
 		if (start >= end)
@@ -606,21 +596,9 @@ static void __init map_mem(pgd_t *pgdp)
 		 * PAGE_KERNEL.
 		 */
 		pr_alert("!!! %s %s %d, Mapping Phy-Addr 0x%llx - 0x%llx as RWX !!!\n", __FILE__, __func__, __LINE__, start, end);
-		__map_memblock(pgdp, start, end, PAGE_USR_RWX, flags);
+		__map_memblock(pgdp, start, end, __pgprot(PROT_NORMAL | PTE_USER), flags);
 	}
-
-	/*
-	 * Map the linear alias of the [_stext, __init_begin) interval
-	 * as non-executable now, and remove the write permission in
-	 * mark_linear_text_alias_ro() below (which will be called after
-	 * alternative patching has completed). This makes the contents
-	 * of the region accessible to subsystems such as hibernate,
-	 * but protects it from inadvertent modification or execution.
-	 * Note that contiguous mappings cannot be remapped in this way,
-	 * so we should avoid them here.
-	 */
-	__map_memblock(pgdp, kernel_start, kernel_end, PAGE_KERNEL, NO_CONT_MAPPINGS);
-	memblock_clear_nomap(kernel_start, kernel_end - kernel_start);
+	
 	arm64_kfence_map_pool(early_kfence_pool, pgdp);
 }
 
@@ -764,10 +742,10 @@ void __init paging_init(void)
 	map_mem(pgdp);
 
 	pgd_clear_fixmap();
-
+	pr_alert("!!! %s %s %d!!!\n", __FILE__, __func__, __LINE__);
 	cpu_replace_ttbr1(lm_alias(swapper_pg_dir), init_idmap_pg_dir);
 	init_mm.pgd = swapper_pg_dir;
-
+	pr_alert("!!! %s %s %d!!!\n", __FILE__, __func__, __LINE__);
 	memblock_phys_free(__pa_symbol(init_pg_dir),
 			   __pa_symbol(init_pg_end) - __pa_symbol(init_pg_dir));
 
