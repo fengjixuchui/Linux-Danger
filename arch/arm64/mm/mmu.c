@@ -598,6 +598,12 @@ static void __init map_mem(pgd_t *pgdp)
 		pr_alert("!!! %s %s %d, Mapping Phy-Addr 0x%llx - 0x%llx as RWX !!!\n", __FILE__, __func__, __LINE__, start, end);
 		__map_memblock(pgdp, start, end, __pgprot(PROT_NORMAL | PTE_USER), flags);
 	}
+
+	if (PHYS_OFFSET)
+	{
+		pr_alert("!!! %s %s %d, Mapping MMIO 0 - 0x%llx as RWX !!!\n", __FILE__, __func__, __LINE__, PHYS_OFFSET);
+		__map_memblock(pgdp, 0, PHYS_OFFSET, __pgprot(PROT_NORMAL | PTE_USER), flags);
+	}
 	
 	arm64_kfence_map_pool(early_kfence_pool, pgdp);
 }
