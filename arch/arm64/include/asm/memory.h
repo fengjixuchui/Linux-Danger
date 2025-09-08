@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2000-2002 Russell King
  * Copyright (C) 2012 ARM Ltd.
+ * Copyright (C) 2025 SuperHacker UEFI
  *
  * Note: this file should not be included by non-asm/.h files
  */
@@ -289,7 +290,7 @@ static inline const void *__tag_set(const void *addr, u8 tag)
  */
 #define __is_lm_address(addr)	(((u64)(addr) - PAGE_OFFSET) < (PAGE_END - PAGE_OFFSET))
 
-#define __lm_to_phys(addr)	(((addr) - PAGE_OFFSET) + PHYS_OFFSET)
+#define __lm_to_phys(addr)	(addr - PAGE_OFFSET)
 #define __kimg_to_phys(addr)	((addr) - kimage_voffset)
 
 #define __virt_to_phys_nodebug(x) ({					\
@@ -307,82 +308,54 @@ extern phys_addr_t __phys_addr_symbol(unsigned long x);
 #define __phys_addr_symbol(x)	__pa_symbol_nodebug(x)
 #endif /* CONFIG_DEBUG_VIRTUAL */
 
-#define __phys_to_virt(x)	((unsigned long)((x) - PHYS_OFFSET) | PAGE_OFFSET)
-#define __phys_to_kimg(x)	((unsigned long)((x) + kimage_voffset))
+#define __phys_to_virt(x)	(x + PAGE_OFFSET)
+#define __phys_to_kimg(x)	(x + kimage_voffset)
 
 /*
  * Convert a page to/from a physical address
  */
-#define page_to_phys(page)	(__pfn_to_phys(page_to_pfn(page)))
-#define phys_to_page(phys)	(pfn_to_page(__phys_to_pfn(phys)))
-
-/*
- * Note: Drivers should NOT use these.  They are the wrong
- * translation for translating DMA addresses.  Use the driver
- * DMA support - see dma-mapping.h.
- */
-#define virt_to_phys virt_to_phys
-static inline phys_addr_t virt_to_phys(const volatile void *x)
-{
-	return __virt_to_phys((unsigned long)(x));
-}
-
-#define phys_to_virt phys_to_virt
-static inline void *phys_to_virt(phys_addr_t x)
-{
-	return (void *)(__phys_to_virt(x));
-}
-
-/* Needed already here for resolving __phys_to_pfn() in virt_to_pfn() */
-#include <asm-generic/memory_model.h>
-
-static inline unsigned long virt_to_pfn(const void *kaddr)
-{
-	return __phys_to_pfn(virt_to_phys(kaddr));
-}
 
 /*
  * Drivers should NOT use these either.
  */
-#define __pa(x)			__virt_to_phys((unsigned long)(x))
+#define __pa __virt_to_phys
 #define __pa_symbol(x)		__phys_addr_symbol(RELOC_HIDE((unsigned long)(x), 0))
 #define __pa_nodebug(x)		__virt_to_phys_nodebug((unsigned long)(x))
-#define __va(x)			((void *)__phys_to_virt((phys_addr_t)(x)))
-#define pfn_to_kaddr(pfn)	__va((pfn) << PAGE_SHIFT)
-#define sym_to_pfn(x)		__phys_to_pfn(__pa_symbol(x))
-
+#define __va(x) ((void *)__phys_to_virt(x)) // mute the fucking warning
+#define pfn_to_kaddr(pfn)	((u64)pfn * PAGE_SIZE + PAGE_OFFSET + PHYS_OFFSET)
+//#define pfn_to_kaddr(pfn)	__va((pfn) << PAGE_SHIFT)
+#define virt_to_pfn(x)	((__virt_to_phys_nodebug(x) - PHYS_OFFSET) / PAGE_SIZE)
+#define sym_to_pfn(x)	(__pa_symbol(x) >> PAGE_SHIFT)
 /*
  *  virt_to_page(x)	convert a _valid_ virtual address to struct page *
  *  virt_addr_valid(x)	indicates whether a virtual address is valid
  */
 #define ARCH_PFN_OFFSET		((unsigned long)PHYS_PFN_OFFSET)
 
-#if defined(CONFIG_DEBUG_VIRTUAL)
-#define page_to_virt(x)	({						\
-	__typeof__(x) __page = x;					\
-	void *__addr = __va(page_to_phys(__page));			\
-	(void *)__tag_set((const void *)__addr, page_kasan_tag(__page));\
-})
-#define virt_to_page(x)		pfn_to_page(virt_to_pfn(x))
-#else
-#define page_to_virt(x)	({						\
-	__typeof__(x) __page = x;					\
-	u64 __idx = ((u64)__page - VMEMMAP_START) / sizeof(struct page);\
-	u64 __addr = PAGE_OFFSET + (__idx * PAGE_SIZE);			\
-	(void *)__tag_set((const void *)__addr, page_kasan_tag(__page));\
+#define page_to_phys(p)	({\
+	u64 __idx = ((u64)p - VMEMMAP_START) / sizeof(struct page);\
+	PHYS_OFFSET + (__idx * PAGE_SIZE);\
 })
 
-#define virt_to_page(x)	({						\
-	u64 __idx = (__tag_reset((u64)x) - PAGE_OFFSET) / PAGE_SIZE;	\
-	u64 __addr = VMEMMAP_START + (__idx * sizeof(struct page));	\
-	(struct page *)__addr;						\
+#define page_to_virt(p)	({\
+	u64 __idx = ((u64)p - VMEMMAP_START) / sizeof(struct page);\
+	u64 __addr = PAGE_OFFSET + PHYS_OFFSET + (__idx * PAGE_SIZE);\
+	(void *)__tag_set((const void *)__addr, page_kasan_tag(p));\
 })
-#endif /* CONFIG_DEBUG_VIRTUAL */
 
-#define virt_addr_valid(addr)	({					\
-	__typeof__(addr) __addr = __tag_reset(addr);			\
-	__is_lm_address(__addr) && pfn_is_map_memory(virt_to_pfn(__addr));	\
+#define phys_to_page(x)	({\
+	u64 __idx = (x - PHYS_OFFSET) / PAGE_SIZE;\
+	u64 __p = VMEMMAP_START + (__idx * sizeof(struct page));\
+	(struct page *)__p;\
 })
+
+#define virt_to_page(x)	({\
+	u64 __idx = ((u64)x - PAGE_OFFSET - PHYS_OFFSET) / PAGE_SIZE;\
+	u64 __p = VMEMMAP_START + (__idx * sizeof(struct page));\
+	(struct page *)__p;\
+})
+
+#define virt_addr_valid(addr) 1
 
 void dump_mem_limit(void);
 #endif /* !ASSEMBLY */
