@@ -291,23 +291,16 @@ static inline const void *__tag_set(const void *addr, u8 tag)
 #define __is_lm_address(addr)	(((u64)(addr) - PAGE_OFFSET) < (PAGE_END - PAGE_OFFSET))
 
 #define __lm_to_phys(addr)	(addr - PAGE_OFFSET)
-#define __kimg_to_phys(addr)	((addr) - kimage_voffset)
+#define __kimg_to_phys(addr)	((u64)addr - kimage_voffset)
 
 #define __virt_to_phys_nodebug(x) ({					\
 	phys_addr_t __x = (phys_addr_t)(__tag_reset(x));		\
 	__is_lm_address(__x) ? __lm_to_phys(__x) : __kimg_to_phys(__x);	\
 })
 
-#define __pa_symbol_nodebug(x)	__kimg_to_phys((phys_addr_t)(x))
+#define __pa_symbol_nodebug __kimg_to_phys
 
-#ifdef CONFIG_DEBUG_VIRTUAL
-extern phys_addr_t __virt_to_phys(unsigned long x);
-extern phys_addr_t __phys_addr_symbol(unsigned long x);
-#else
-#define __virt_to_phys(x)	__virt_to_phys_nodebug(x)
-#define __phys_addr_symbol(x)	__pa_symbol_nodebug(x)
-#endif /* CONFIG_DEBUG_VIRTUAL */
-
+#define __virt_to_phys __virt_to_phys_nodebug
 #define __phys_to_virt(x)	(x + PAGE_OFFSET)
 #define __phys_to_kimg(x)	(x + kimage_voffset)
 
@@ -318,14 +311,13 @@ extern phys_addr_t __phys_addr_symbol(unsigned long x);
 /*
  * Drivers should NOT use these either.
  */
-#define __pa __virt_to_phys
-#define __pa_symbol(x)		__phys_addr_symbol(RELOC_HIDE((unsigned long)(x), 0))
-#define __pa_nodebug(x)		__virt_to_phys_nodebug((unsigned long)(x))
+#define __pa __virt_to_phys_nodebug
+#define __pa_symbol __kimg_to_phys
+#define __pa_nodebug __virt_to_phys_nodebug
 #define __va(x) ((void *)__phys_to_virt(x)) // mute the fucking warning
-#define pfn_to_kaddr(pfn)	((u64)pfn * PAGE_SIZE + PAGE_OFFSET + PHYS_OFFSET)
-//#define pfn_to_kaddr(pfn)	__va((pfn) << PAGE_SHIFT)
+#define pfn_to_kaddr(pfn)	((void *)(pfn * PAGE_SIZE + PHYS_OFFSET + PAGE_OFFSET))
 #define virt_to_pfn(x)	((__virt_to_phys_nodebug(x) - PHYS_OFFSET) / PAGE_SIZE)
-#define sym_to_pfn(x)	(__pa_symbol(x) >> PAGE_SHIFT)
+#define sym_to_pfn(x)	(__kimg_to_phys(x) >> PAGE_SHIFT)
 /*
  *  virt_to_page(x)	convert a _valid_ virtual address to struct page *
  *  virt_addr_valid(x)	indicates whether a virtual address is valid
