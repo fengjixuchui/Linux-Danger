@@ -743,12 +743,12 @@ void __init paging_init(void)
 	extern pgd_t init_idmap_pg_dir[];
 
 	idmap_t0sz = 63UL - __fls(__pa_symbol(_end) | GENMASK(VA_BITS_MIN - 1, 0));
-
+	pr_alert("!!! %s %s %d, kimage_voffset=0x%llx _stext is on phy-addr 0x%llx !!!\n", __FILE__, __func__, __LINE__, kimage_voffset, __pa_symbol(_stext));
 	map_kernel(pgdp);
 	map_mem(pgdp);
 
 	pgd_clear_fixmap();
-	pr_alert("!!! %s %s %d!!!\n", __FILE__, __func__, __LINE__);
+	//pr_alert("!!! %s %s %d!!!\n", __FILE__, __func__, __LINE__);
 	cpu_replace_ttbr1(lm_alias(swapper_pg_dir), init_idmap_pg_dir);
 	init_mm.pgd = swapper_pg_dir;
 	pr_alert("!!! %s %s %d!!!\n", __FILE__, __func__, __LINE__);
