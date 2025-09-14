@@ -315,8 +315,9 @@ static inline const void *__tag_set(const void *addr, u8 tag)
 #define __pa_symbol __kimg_to_phys
 #define __pa_nodebug __virt_to_phys_nodebug
 #define __va(x) ((void *)__phys_to_virt(x)) // mute the fucking warning
-#define pfn_to_kaddr(pfn)	((void *)(pfn * PAGE_SIZE + PHYS_OFFSET + PAGE_OFFSET))
-#define virt_to_pfn(x)	((__virt_to_phys_nodebug(x) - PHYS_OFFSET) / PAGE_SIZE)
+// well, the PFN defined in memory_model.h is included ARCH_PFN_OFFSET, so we can write phys_addr directly
+#define pfn_to_kaddr(pfn)	((void *)(pfn * PAGE_SIZE + PAGE_OFFSET))
+#define virt_to_pfn(x)	(__virt_to_phys_nodebug(x) >> PAGE_SHIFT)
 #define sym_to_pfn(x)	(__kimg_to_phys(x) >> PAGE_SHIFT)
 /*
  *  virt_to_page(x)	convert a _valid_ virtual address to struct page *
