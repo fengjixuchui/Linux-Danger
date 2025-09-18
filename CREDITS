@@ -11,9 +11,13 @@
 
 N: SuperHacker UEFI
 E: zhuoshizhang@hotmail.com
-D: Hack CS->0x30
-D: Replace hrtimer->HLT
-D: Clean bullshit in entry_64.S & idtentry.h
+D: x64: Hack CS->0x30
+D: x64: Clean bullshit in entry_64.S & idtentry.h
+D: arm64: Hack PageTable to RWX, EL0 can do anything fuck they like
+D: arm64: Hack PAGE_OFFSET to physical-addr 0, EL0 can touch MMIO easily.
+D: arm64: Clean bullshit in pgtable-prot.h & memory.h
+D: Replace hrtimer_nanosleep->HLT, add TASK_HLT_SLEEP status
+D: Clean CFS bullshit with easy_sched
 
 N: Matt Mackal
 E: mpm@selenic.com
