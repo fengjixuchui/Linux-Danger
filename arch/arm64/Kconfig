@@ -1545,7 +1545,7 @@ config ARCH_FORCE_MAX_ORDER
 
 config UNMAP_KERNEL_AT_EL0
 	bool "Unmap kernel when running in userspace (aka \"KAISER\")" if EXPERT
-	default y
+	default n
 	help
 	  Speculation attacks against some high-performance processors can
 	  be used to bypass MMU permission checks and leak kernel data to
@@ -1761,7 +1761,7 @@ config ARM64_HW_AFDBM
 
 config ARM64_PAN
 	bool "Enable support for Privileged Access Never (PAN)"
-	default y
+	default n
 	help
 	  Privileged Access Never (PAN; part of the ARMv8.1 Extensions)
 	  prevents the kernel or hypervisor from accessing user-space (EL0)
