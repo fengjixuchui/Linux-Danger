@@ -567,10 +567,8 @@ static inline void arm64_kfence_map_pool(phys_addr_t kfence_pool, pgd_t *pgdp) {
 static void __init map_mem(pgd_t *pgdp)
 {
 	static const u64 direct_map_end = _PAGE_END(VA_BITS_MIN);
-	phys_addr_t start, end;
 	phys_addr_t early_kfence_pool;
 	int flags = NO_EXEC_MAPPINGS;
-	u64 i;
 
 	/*
 	 * Setting hierarchical PXNTable attributes on table entries covering
@@ -587,24 +585,8 @@ static void __init map_mem(pgd_t *pgdp)
 		flags |= NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
 	
 	/* map all the memory banks */
-	for_each_mem_range(i, &start, &end) {
-		if (start >= end)
-			break;
-		/*
-		 * The linear map must allow allocation tags reading/writing
-		 * if MTE is present. Otherwise, it has the same attributes as
-		 * PAGE_KERNEL.
-		 */
-		pr_alert("!!! %s %s %d, Mapping Phy-Addr 0x%llx - 0x%llx as RWX !!!\n", __FILE__, __func__, __LINE__, start, end);
-		__map_memblock(pgdp, start, end, __pgprot(PROT_NORMAL | PTE_USER), flags);
-	}
-
-	if (PHYS_OFFSET)
-	{
-		pr_alert("!!! %s %s %d, Mapping MMIO 0 - 0x%llx as RWX !!!\n", __FILE__, __func__, __LINE__, PHYS_OFFSET);
-		__map_memblock(pgdp, 0, PHYS_OFFSET, __pgprot(PROT_NORMAL | PTE_USER), flags);
-	}
-	
+	__map_memblock(pgdp, 0, 0xffffffff, __pgprot(PROT_NORMAL | PTE_USER), flags);
+	pr_alert("!!! %s %s %d, Mapping 0 - 0xffffffff as Usr-RWX !!!\n", __FILE__, __func__, __LINE__);
 	arm64_kfence_map_pool(early_kfence_pool, pgdp);
 }
 
