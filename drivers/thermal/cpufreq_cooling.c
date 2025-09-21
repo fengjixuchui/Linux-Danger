@@ -148,9 +148,9 @@ static u32 cpu_power_to_freq(struct cpufreq_cooling_device *cpufreq_cdev,
 static u32 get_load(struct cpufreq_cooling_device *cpufreq_cdev, int cpu,
 		    int cpu_idx)
 {
-	unsigned long util = sched_cpu_util(cpu);
-
-	return (util * 100) / arch_scale_cpu_capacity(cpu);
+	// unsigned long util = sched_cpu_util(cpu);
+	// return (util * 100) / arch_scale_cpu_capacity(cpu);
+	return 100;
 }
 #else /* !CONFIG_SMP */
 static u32 get_load(struct cpufreq_cooling_device *cpufreq_cdev, int cpu,
