@@ -1927,7 +1927,7 @@ extern struct task_struct *idle_task(int cpu);
  */
 static __always_inline bool is_idle_task(const struct task_struct *p)
 {
-	return !!(p->flags & PF_IDLE);
+	return (p->flags & PF_IDLE) || p->__state == TASK_HLT_SLEEP;
 }
 
 extern struct task_struct *curr_task(int cpu);

@@ -105,12 +105,7 @@ static void yield_task_easy(struct rq *rq)
     easy_context->index++;
 }
 
-static void put_prev_task_easy(struct rq *rq, struct task_struct *p)
-{
-    //account_user_time(p, 233);
-    p->utime += 233;
-    //pr_alert("!!! %s update pid=%d utime=%lld !!!\n", __func__, p->pid, p->utime);
-}
+static void put_prev_task_easy(struct rq *rq, struct task_struct *p) {}
 static void set_next_task_easy(struct rq *rq, struct task_struct *p, bool first) { }
 static void check_preempt_curr_easy(struct rq *rq, struct task_struct *p, int flags) { }
 static void task_tick_easy(struct rq *rq, struct task_struct *p, int queued) { }

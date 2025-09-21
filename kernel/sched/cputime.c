@@ -400,7 +400,7 @@ static void irqtime_account_process_tick(struct task_struct *p, int user_tick,
 		account_system_index_time(p, cputime, CPUTIME_SOFTIRQ);
 	} else if (user_tick) {
 		account_user_time(p, cputime);
-	} else if (p == this_rq()->idle) {
+	} else if (p == this_rq()->idle || p->__state == TASK_HLT_SLEEP) {
 		account_idle_time(cputime);
 	} else if (p->flags & PF_VCPU) { /* System time or guest time */
 		account_guest_time(p, cputime);
@@ -506,10 +506,10 @@ void account_process_tick(struct task_struct *p, int user_tick)
 
 	if (user_tick)
 		account_user_time(p, cputime);
-	else if ((p != this_rq()->idle) || (irq_count() != HARDIRQ_OFFSET))
-		account_system_time(p, HARDIRQ_OFFSET, cputime);
-	else
+	else if (p == this_rq()->idle || p->__state == TASK_HLT_SLEEP)
 		account_idle_time(cputime);
+	else
+		account_system_time(p, HARDIRQ_OFFSET, cputime);
 }
 
 /*
