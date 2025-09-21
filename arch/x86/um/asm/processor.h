@@ -33,7 +33,7 @@ static __always_inline void cpu_relax(void)
 	    time_travel_mode == TT_MODE_EXTERNAL)
 		time_travel_ndelay(1);
 	else
-		rep_nop();
+		asm volatile("sti; hlt");
 }
 
 #define task_pt_regs(t) (&(t)->thread.regs)
