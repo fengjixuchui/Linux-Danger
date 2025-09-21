@@ -13,7 +13,7 @@ static __always_inline void rep_nop(void)
 	asm volatile("rep; nop" ::: "memory");
 }
 
-#define cpu_relax() asm volatile("sti; hlt")
+#define cpu_relax rep_nop
 
 struct getcpu_cache;
 

@@ -6331,57 +6331,6 @@ static void sched_core_cpu_starting(unsigned int cpu)
 	}
 }
 
-static void sched_core_cpu_deactivate(unsigned int cpu)
-{
-	const struct cpumask *smt_mask = cpu_smt_mask(cpu);
-	struct rq *rq = cpu_rq(cpu), *core_rq = NULL;
-	int t;
-
-	guard(core_lock)(&cpu);
-
-	/* if we're the last man standing, nothing to do */
-	if (cpumask_weight(smt_mask) == 1) {
-		WARN_ON_ONCE(rq->core != rq);
-		return;
-	}
-
-	/* if we're not the leader, nothing to do */
-	if (rq->core != rq)
-		return;
-
-	/* find a new leader */
-	for_each_cpu(t, smt_mask) {
-		if (t == cpu)
-			continue;
-		core_rq = cpu_rq(t);
-		break;
-	}
-
-	if (WARN_ON_ONCE(!core_rq)) /* impossible */
-		return;
-
-	/* copy the shared state to the new leader */
-	core_rq->core_task_seq             = rq->core_task_seq;
-	core_rq->core_pick_seq             = rq->core_pick_seq;
-	core_rq->core_cookie               = rq->core_cookie;
-	core_rq->core_forceidle_count      = rq->core_forceidle_count;
-	core_rq->core_forceidle_seq        = rq->core_forceidle_seq;
-	core_rq->core_forceidle_occupation = rq->core_forceidle_occupation;
-
-	/*
-	 * Accounting edge for forced idle is handled in pick_next_task().
-	 * Don't need another one here, since the hotplug thread shouldn't
-	 * have a cookie.
-	 */
-	core_rq->core_forceidle_start = 0;
-
-	/* install new leader */
-	for_each_cpu(t, smt_mask) {
-		rq = cpu_rq(t);
-		rq->core = core_rq;
-	}
-}
-
 static inline void sched_core_cpu_dying(unsigned int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
