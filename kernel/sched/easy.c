@@ -148,9 +148,6 @@ static void switched_from_easy(struct rq *rq, struct task_struct *p) { }
 static void switched_to_easy(struct rq *rq, struct task_struct *p) { }
 static unsigned int get_rr_interval_easy(struct rq *rq, struct task_struct *task) { return HZ; }
 static void update_curr_easy(struct rq *rq) { }
-#ifdef CONFIG_FAIR_GROUP_SCHED
-static void task_change_group_easy(struct task_struct *p) { }
-#endif
 #ifdef CONFIG_SCHED_CORE
 static int task_is_throttled_easy(struct task_struct *p, int cpu) {return 0;}
 #endif
@@ -191,11 +188,6 @@ DEFINE_SCHED_CLASS(easy) =
 
     .get_rr_interval     = get_rr_interval_easy,
     .update_curr         = update_curr_easy,
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-    .task_change_group   = task_change_group_easy,
-#endif
-
 #ifdef CONFIG_SCHED_CORE
     .task_is_throttled   = task_is_throttled_easy,
 #endif

@@ -204,23 +204,6 @@ struct teo_cpu {
 static DEFINE_PER_CPU(struct teo_cpu, teo_cpus);
 
 /**
- * teo_cpu_is_utilized - Check if the CPU's util is above the threshold
- * @cpu: Target CPU
- * @cpu_data: Governor CPU data for the target CPU
- */
-#ifdef CONFIG_SMP
-static bool teo_cpu_is_utilized(int cpu, struct teo_cpu *cpu_data)
-{
-	return sched_cpu_util(cpu) > cpu_data->util_threshold;
-}
-#else
-static bool teo_cpu_is_utilized(int cpu, struct teo_cpu *cpu_data)
-{
-	return false;
-}
-#endif
-
-/**
  * teo_update - Update CPU metrics after wakeup.
  * @drv: cpuidle driver containing state data.
  * @dev: Target CPU.
@@ -410,33 +393,7 @@ static int teo_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 
 	if (!dev->states_usage[0].disable)
 		idx = 0;
-
-	cpu_utilized = teo_cpu_is_utilized(dev->cpu, cpu_data);
-	/*
-	 * If the CPU is being utilized over the threshold and there are only 2
-	 * states to choose from, the metrics need not be considered, so choose
-	 * the shallowest non-polling state and exit.
-	 */
-	if (drv->state_count < 3 && cpu_utilized) {
-		/*
-		 * If state 0 is enabled and it is not a polling one, select it
-		 * right away unless the scheduler tick has been stopped, in
-		 * which case care needs to be taken to leave the CPU in a deep
-		 * enough state in case it is not woken up any time soon after
-		 * all.  If state 1 is disabled, though, state 0 must be used
-		 * anyway.
-		 */
-		if ((!idx && !(drv->states[0].flags & CPUIDLE_FLAG_POLLING) &&
-		    teo_state_ok(0, drv)) || dev->states_usage[1].disable) {
-			idx = 0;
-			goto out_tick;
-		}
-		/* Assume that state 1 is not a polling one and use it. */
-		idx = 1;
-		duration_ns = drv->states[1].target_residency_ns;
-		goto end;
-	}
-
+	
 	/* Compute the sums of metrics for early wakeup pattern detection. */
 	for (i = 1; i < drv->state_count; i++) {
 		struct teo_bin *prev_bin = &cpu_data->state_bins[i-1];

@@ -3002,7 +3002,7 @@ static DEVICE_ATTR_RW(control);
 static ssize_t active_show(struct device *dev,
 			   struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE - 2, "%d\n", sched_smt_active());
+	return snprintf(buf, PAGE_SIZE - 2, "nothing 233\n");
 }
 static DEVICE_ATTR_RO(active);
 

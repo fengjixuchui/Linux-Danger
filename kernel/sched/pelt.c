@@ -303,35 +303,6 @@ int __update_load_avg_blocked_se(u64 now, struct sched_entity *se)
 	return 0;
 }
 
-int __update_load_avg_se(u64 now, struct cfs_rq *cfs_rq, struct sched_entity *se)
-{
-	if (___update_load_sum(now, &se->avg, !!se->on_rq, se_runnable(se),
-				cfs_rq->curr == se)) {
-
-		___update_load_avg(&se->avg, se_weight(se));
-		cfs_se_util_change(&se->avg);
-		trace_pelt_se_tp(se);
-		return 1;
-	}
-
-	return 0;
-}
-
-int __update_load_avg_cfs_rq(u64 now, struct cfs_rq *cfs_rq)
-{
-	if (___update_load_sum(now, &cfs_rq->avg,
-				scale_load_down(cfs_rq->load.weight),
-				cfs_rq->h_nr_running,
-				cfs_rq->curr != NULL)) {
-
-		___update_load_avg(&cfs_rq->avg, 1);
-		trace_pelt_cfs_tp(cfs_rq);
-		return 1;
-	}
-
-	return 0;
-}
-
 /*
  * rt_rq:
  *

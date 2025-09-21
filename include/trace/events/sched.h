@@ -595,7 +595,7 @@ TRACE_EVENT(sched_move_numa,
 	TP_fast_assign(
 		__entry->pid		= task_pid_nr(tsk);
 		__entry->tgid		= task_tgid_nr(tsk);
-		__entry->ngid		= task_numa_group_id(tsk);
+		__entry->ngid		= 0;
 		__entry->src_cpu	= src_cpu;
 		__entry->src_nid	= cpu_to_node(src_cpu);
 		__entry->dst_cpu	= dst_cpu;
@@ -631,12 +631,12 @@ DECLARE_EVENT_CLASS(sched_numa_pair_template,
 	TP_fast_assign(
 		__entry->src_pid	= task_pid_nr(src_tsk);
 		__entry->src_tgid	= task_tgid_nr(src_tsk);
-		__entry->src_ngid	= task_numa_group_id(src_tsk);
+		__entry->src_ngid	= 0;
 		__entry->src_cpu	= src_cpu;
 		__entry->src_nid	= cpu_to_node(src_cpu);
 		__entry->dst_pid	= dst_tsk ? task_pid_nr(dst_tsk) : 0;
 		__entry->dst_tgid	= dst_tsk ? task_tgid_nr(dst_tsk) : 0;
-		__entry->dst_ngid	= dst_tsk ? task_numa_group_id(dst_tsk) : 0;
+		__entry->dst_ngid	= 0;
 		__entry->dst_cpu	= dst_cpu;
 		__entry->dst_nid	= dst_cpu >= 0 ? cpu_to_node(dst_cpu) : -1;
 	),
@@ -691,9 +691,6 @@ TRACE_EVENT(sched_wake_idle_without_ipi,
  *
  * Postfixed with _tp to make them easily identifiable in the code.
  */
-DECLARE_TRACE(pelt_cfs_tp,
-	TP_PROTO(struct cfs_rq *cfs_rq),
-	TP_ARGS(cfs_rq));
 
 DECLARE_TRACE(pelt_rt_tp,
 	TP_PROTO(struct rq *rq),
@@ -722,10 +719,6 @@ DECLARE_TRACE(sched_cpu_capacity_tp,
 DECLARE_TRACE(sched_overutilized_tp,
 	TP_PROTO(struct root_domain *rd, bool overutilized),
 	TP_ARGS(rd, overutilized));
-
-DECLARE_TRACE(sched_util_est_cfs_tp,
-	TP_PROTO(struct cfs_rq *cfs_rq),
-	TP_ARGS(cfs_rq));
 
 DECLARE_TRACE(sched_util_est_se_tp,
 	TP_PROTO(struct sched_entity *se),

@@ -1142,8 +1142,6 @@ void unpriv_ebpf_notify(int new_state)
 		pr_err(SPECTRE_V2_EIBRS_EBPF_MSG);
 		break;
 	case SPECTRE_V2_EIBRS_LFENCE:
-		if (sched_smt_active())
-			pr_err(SPECTRE_V2_EIBRS_LFENCE_EBPF_SMT_MSG);
 		break;
 	default:
 		break;
@@ -1739,9 +1737,6 @@ static void update_stibp_strict(void)
 {
 	u64 mask = x86_spec_ctrl_base & ~SPEC_CTRL_STIBP;
 
-	if (sched_smt_active())
-		mask |= SPEC_CTRL_STIBP;
-
 	if (mask == x86_spec_ctrl_base)
 		return;
 
@@ -1754,10 +1749,7 @@ static void update_stibp_strict(void)
 /* Update the static key controlling the evaluation of TIF_SPEC_IB */
 static void update_indir_branch_cond(void)
 {
-	if (sched_smt_active())
-		static_branch_enable(&switch_to_cond_stibp);
-	else
-		static_branch_disable(&switch_to_cond_stibp);
+	static_branch_disable(&switch_to_cond_stibp);
 }
 
 #undef pr_fmt
@@ -1778,10 +1770,7 @@ static void update_mds_branch_idle(void)
 	 */
 	if (!boot_cpu_has_bug(X86_BUG_MSBDS_ONLY))
 		return;
-
-	if (sched_smt_active()) {
-		static_branch_enable(&mds_idle_clear);
-	} else if (mmio_mitigation == MMIO_MITIGATION_OFF ||
+	else if (mmio_mitigation == MMIO_MITIGATION_OFF ||
 		   (ia32_cap & ARCH_CAP_FBSDP_NO)) {
 		static_branch_disable(&mds_idle_clear);
 	}
@@ -1794,10 +1783,6 @@ static void update_mds_branch_idle(void)
 void cpu_bugs_smt_update(void)
 {
 	mutex_lock(&spec_ctrl_mutex);
-
-	if (sched_smt_active() && unprivileged_ebpf_enabled() &&
-	    spectre_v2_enabled == SPECTRE_V2_EIBRS_LFENCE)
-		pr_warn_once(SPECTRE_V2_EIBRS_LFENCE_EBPF_SMT_MSG);
 
 	switch (spectre_v2_user_stibp) {
 	case SPECTRE_V2_USER_NONE:
@@ -1815,8 +1800,6 @@ void cpu_bugs_smt_update(void)
 	switch (mds_mitigation) {
 	case MDS_MITIGATION_FULL:
 	case MDS_MITIGATION_VMWERV:
-		if (sched_smt_active() && !boot_cpu_has(X86_BUG_MSBDS_ONLY))
-			pr_warn_once(MDS_MSG_SMT);
 		update_mds_branch_idle();
 		break;
 	case MDS_MITIGATION_OFF:
@@ -1826,8 +1809,6 @@ void cpu_bugs_smt_update(void)
 	switch (taa_mitigation) {
 	case TAA_MITIGATION_VERW:
 	case TAA_MITIGATION_UCODE_NEEDED:
-		if (sched_smt_active())
-			pr_warn_once(TAA_MSG_SMT);
 		break;
 	case TAA_MITIGATION_TSX_DISABLED:
 	case TAA_MITIGATION_OFF:
@@ -1837,8 +1818,6 @@ void cpu_bugs_smt_update(void)
 	switch (mmio_mitigation) {
 	case MMIO_MITIGATION_VERW:
 	case MMIO_MITIGATION_UCODE_NEEDED:
-		if (sched_smt_active())
-			pr_warn_once(MMIO_MSG_SMT);
 		break;
 	case MMIO_MITIGATION_OFF:
 		break;
@@ -2523,16 +2502,9 @@ static ssize_t l1tf_show_state(char *buf)
 	if (l1tf_vmx_mitigation == VMENTER_L1D_FLUSH_AUTO)
 		return sysfs_emit(buf, "%s\n", L1TF_DEFAULT_MSG);
 
-	if (l1tf_vmx_mitigation == VMENTER_L1D_FLUSH_EPT_DISABLED ||
-	    (l1tf_vmx_mitigation == VMENTER_L1D_FLUSH_NEVER &&
-	     sched_smt_active())) {
-		return sysfs_emit(buf, "%s; VMX: %s\n", L1TF_DEFAULT_MSG,
-				  l1tf_vmx_states[l1tf_vmx_mitigation]);
-	}
-
 	return sysfs_emit(buf, "%s; VMX: %s, SMT %s\n", L1TF_DEFAULT_MSG,
 			  l1tf_vmx_states[l1tf_vmx_mitigation],
-			  sched_smt_active() ? "vulnerable" : "disabled");
+			  "disabled");
 }
 
 static ssize_t itlb_multihit_show_state(char *buf)
@@ -2569,11 +2541,11 @@ static ssize_t mds_show_state(char *buf)
 	if (boot_cpu_has(X86_BUG_MSBDS_ONLY)) {
 		return sysfs_emit(buf, "%s; SMT %s\n", mds_strings[mds_mitigation],
 				  (mds_mitigation == MDS_MITIGATION_OFF ? "vulnerable" :
-				   sched_smt_active() ? "mitigated" : "disabled"));
+				   "disabled"));
 	}
 
 	return sysfs_emit(buf, "%s; SMT %s\n", mds_strings[mds_mitigation],
-			  sched_smt_active() ? "vulnerable" : "disabled");
+			"disabled");
 }
 
 static ssize_t tsx_async_abort_show_state(char *buf)
@@ -2588,7 +2560,7 @@ static ssize_t tsx_async_abort_show_state(char *buf)
 	}
 
 	return sysfs_emit(buf, "%s; SMT %s\n", taa_strings[taa_mitigation],
-			  sched_smt_active() ? "vulnerable" : "disabled");
+			"disabled");
 }
 
 static ssize_t mmio_stale_data_show_state(char *buf)
@@ -2605,7 +2577,7 @@ static ssize_t mmio_stale_data_show_state(char *buf)
 	}
 
 	return sysfs_emit(buf, "%s; SMT %s\n", mmio_strings[mmio_mitigation],
-			  sched_smt_active() ? "vulnerable" : "disabled");
+			"disabled");
 }
 
 static char *stibp_state(void)
@@ -2662,10 +2634,6 @@ static ssize_t spectre_v2_show_state(char *buf)
 	if (spectre_v2_enabled == SPECTRE_V2_EIBRS && unprivileged_ebpf_enabled())
 		return sysfs_emit(buf, "Vulnerable: eIBRS with unprivileged eBPF\n");
 
-	if (sched_smt_active() && unprivileged_ebpf_enabled() &&
-	    spectre_v2_enabled == SPECTRE_V2_EIBRS_LFENCE)
-		return sysfs_emit(buf, "Vulnerable: eIBRS+LFENCE with unprivileged eBPF and SMT\n");
-
 	return sysfs_emit(buf, "%s%s%s%s%s%s%s\n",
 			  spectre_v2_strings[spectre_v2_enabled],
 			  ibpb_state(),
@@ -2690,10 +2658,7 @@ static ssize_t retbleed_show_state(char *buf)
 			return sysfs_emit(buf, "Vulnerable: untrained return thunk / IBPB on non-AMD based uarch\n");
 
 		return sysfs_emit(buf, "%s; SMT %s\n", retbleed_strings[retbleed_mitigation],
-				  !sched_smt_active() ? "disabled" :
-				  spectre_v2_user_stibp == SPECTRE_V2_USER_STRICT ||
-				  spectre_v2_user_stibp == SPECTRE_V2_USER_STRICT_PREFERRED ?
-				  "enabled with STIBP protection" : "vulnerable");
+				"disabled");
 	}
 
 	return sysfs_emit(buf, "%s\n", retbleed_strings[retbleed_mitigation]);

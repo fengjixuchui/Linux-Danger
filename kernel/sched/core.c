@@ -103,7 +103,6 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(ipi_send_cpumask);
  * Export tracepoints that act as a bare tracehook (ie: have no trace event
  * associated with them) to allow external modules to probe them.
  */
-EXPORT_TRACEPOINT_SYMBOL_GPL(pelt_cfs_tp);
 EXPORT_TRACEPOINT_SYMBOL_GPL(pelt_rt_tp);
 EXPORT_TRACEPOINT_SYMBOL_GPL(pelt_dl_tp);
 EXPORT_TRACEPOINT_SYMBOL_GPL(pelt_irq_tp);
@@ -111,7 +110,6 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(pelt_se_tp);
 EXPORT_TRACEPOINT_SYMBOL_GPL(pelt_thermal_tp);
 EXPORT_TRACEPOINT_SYMBOL_GPL(sched_cpu_capacity_tp);
 EXPORT_TRACEPOINT_SYMBOL_GPL(sched_overutilized_tp);
-EXPORT_TRACEPOINT_SYMBOL_GPL(sched_util_est_cfs_tp);
 EXPORT_TRACEPOINT_SYMBOL_GPL(sched_util_est_se_tp);
 EXPORT_TRACEPOINT_SYMBOL_GPL(sched_update_nr_running_tp);
 
@@ -192,9 +190,6 @@ static inline bool prio_less(const struct task_struct *a,
 
 	if (pa == -1) /* dl_prio() doesn't work because of stop_class above */
 		return !dl_time_before(a->dl.deadline, b->dl.deadline);
-
-	if (pa == MAX_RT_PRIO + MAX_NICE)	/* fair */
-		return cfs_prio_less(a, b, in_fi);
 
 	return false;
 }
@@ -1240,67 +1235,10 @@ bool sched_can_stop_tick(struct rq *rq)
 	if (rq->nr_running > 1)
 		return false;
 
-	/*
-	 * If there is one task and it has CFS runtime bandwidth constraints
-	 * and it's on the cpu now we don't want to stop the tick.
-	 * This check prevents clearing the bit if a newly enqueued task here is
-	 * dequeued by migrating while the constrained task continues to run.
-	 * E.g. going from 2->1 without going through pick_next_task().
-	 */
-	if (sched_feat(HZ_BW) && __need_bw_check(rq, rq->curr)) {
-		if (cfs_task_bw_constrained(rq->curr))
-			return false;
-	}
-
 	return true;
 }
 #endif /* CONFIG_NO_HZ_FULL */
 #endif /* CONFIG_SMP */
-
-#if defined(CONFIG_RT_GROUP_SCHED) || (defined(CONFIG_FAIR_GROUP_SCHED) && \
-			(defined(CONFIG_SMP) || defined(CONFIG_CFS_BANDWIDTH)))
-/*
- * Iterate task_group tree rooted at *from, calling @down when first entering a
- * node and @up when leaving it for the final time.
- *
- * Caller must hold rcu_lock or sufficient equivalent.
- */
-int walk_tg_tree_from(struct task_group *from,
-			     tg_visitor down, tg_visitor up, void *data)
-{
-	struct task_group *parent, *child;
-	int ret;
-
-	parent = from;
-
-down:
-	ret = (*down)(parent, data);
-	if (ret)
-		goto out;
-	list_for_each_entry_rcu(child, &parent->children, siblings) {
-		parent = child;
-		goto down;
-
-up:
-		continue;
-	}
-	ret = (*up)(parent, data);
-	if (ret || parent == from)
-		goto out;
-
-	child = parent;
-	parent = parent->parent;
-	if (parent)
-		goto up;
-out:
-	return ret;
-}
-
-int tg_nop(struct task_group *tg, void *data)
-{
-	return 0;
-}
-#endif
 
 static void set_load_weight(struct task_struct *p, bool update_load)
 {
@@ -1321,7 +1259,7 @@ static void set_load_weight(struct task_struct *p, bool update_load)
 	 * weight
 	 */
 	if (update_load && p->sched_class == &easy_sched_class) {
-		reweight_task(p, prio);
+		
 	} else {
 		load->weight = scale_load(sched_prio_to_weight[prio]);
 		load->inv_weight = sched_prio_to_wmult[prio];
@@ -4198,6 +4136,12 @@ bool ttwu_state_match(struct task_struct *p, unsigned int state, int *success)
  */
 int try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 {
+	if (p->__state == TASK_HLT_SLEEP)
+	{
+		p->__state = TASK_RUNNING;
+		return 1;
+	}
+
 	guard(preempt)();
 	int cpu, success = 0;
 
@@ -4502,12 +4446,8 @@ static void __sched_fork(unsigned long clone_flags, struct task_struct *p)
 	p->se.nr_migrations		= 0;
 	p->se.vruntime			= 0;
 	p->se.vlag			= 0;
-	p->se.slice			= sysctl_sched_base_slice;
+	p->se.slice			= 0;
 	INIT_LIST_HEAD(&p->se.group_node);
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	p->se.cfs_rq			= NULL;
-#endif
 
 #ifdef CONFIG_SCHEDSTATS
 	/* Even if schedstat is disabled, there should not be garbage */
@@ -4532,7 +4472,6 @@ static void __sched_fork(unsigned long clone_flags, struct task_struct *p)
 #ifdef CONFIG_COMPACTION
 	p->capture_control = NULL;
 #endif
-	init_numa_balancing(clone_flags, p);
 #ifdef CONFIG_SMP
 	p->wake_entry.u_flags = CSD_TYPE_TTWU;
 	p->migration_pending = NULL;
@@ -4771,9 +4710,6 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 	else
 		p->sched_class = &easy_sched_class;
 
-	init_entity_runnable_average(&p->se);
-
-
 #ifdef CONFIG_SCHED_INFO
 	if (likely(sched_info_on()))
 		memset(&p->sched_info, 0, sizeof(p->sched_info));
@@ -4868,7 +4804,6 @@ void wake_up_new_task(struct task_struct *p)
 #endif
 	rq = __task_rq_lock(p, &rf);
 	update_rq_clock(rq);
-	post_init_entity_util_avg(p);
 
 	activate_task(rq, p, ENQUEUE_NOCLOCK);
 	trace_sched_wakeup_new(p);
@@ -5526,23 +5461,6 @@ EXPORT_PER_CPU_SYMBOL(kstat);
 EXPORT_PER_CPU_SYMBOL(kernel_cpustat);
 
 /*
- * The function fair_sched_class.update_curr accesses the struct curr
- * and its field curr->exec_start; when called from task_sched_runtime(),
- * we observe a high rate of cache misses in practice.
- * Prefetching this data results in improved performance.
- */
-static inline void prefetch_curr_exec_start(struct task_struct *p)
-{
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	struct sched_entity *curr = (&p->se)->cfs_rq->curr;
-#else
-	struct sched_entity *curr = (&task_rq(p)->cfs)->curr;
-#endif
-	prefetch(curr);
-	prefetch(&curr->exec_start);
-}
-
-/*
  * Return accounted runtime for the task.
  * In case the task is currently running, return the runtime plus current's
  * pending runtime that have not been accounted yet.
@@ -5576,7 +5494,6 @@ unsigned long long task_sched_runtime(struct task_struct *p)
 	 * thread, breaking clock_gettime().
 	 */
 	if (task_current(rq, p) && task_on_rq_queued(p)) {
-		prefetch_curr_exec_start(p);
 		update_rq_clock(rq);
 		p->sched_class->update_curr(rq);
 	}
@@ -5677,7 +5594,6 @@ void scheduler_tick(void)
 
 #ifdef CONFIG_SMP
 	rq->idle_balance = idle_cpu(cpu);
-	trigger_load_balance(rq);
 #endif
 }
 
@@ -6045,8 +5961,6 @@ static inline struct task_struct *pick_task(struct rq *rq)
 	BUG(); /* The idle class should always have a runnable task. */
 }
 
-extern void task_vruntime_update(struct rq *rq, struct task_struct *p, bool in_fi);
-
 static void queue_core_balance(struct rq *rq);
 
 static struct task_struct *
@@ -6147,7 +6061,6 @@ pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 			 * unconstrained picks as well.
 			 */
 			WARN_ON_ONCE(fi_before);
-			task_vruntime_update(rq, next, false);
 			goto out_set_next;
 		}
 	}
@@ -6237,17 +6150,6 @@ pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 		 */
 		if (!rq_i->core_pick)
 			continue;
-
-		/*
-		 * Update for new !FI->FI transitions, or if continuing to be in !FI:
-		 * fi_before     fi      update?
-		 *  0            0       1
-		 *  0            1       1
-		 *  1            0       1
-		 *  1            1       0
-		 */
-		if (!(fi_before && rq->core->core_forceidle_count))
-			task_vruntime_update(rq_i, rq_i->core_pick, !!rq->core->core_forceidle_count);
 
 		rq_i->core_pick->core_occupation = occ;
 
@@ -7371,121 +7273,6 @@ int sched_core_idle_cpu(int cpu)
 }
 
 #endif
-
-#ifdef CONFIG_SMP
-/*
- * This function computes an effective utilization for the given CPU, to be
- * used for frequency selection given the linear relation: f = u * f_max.
- *
- * The scheduler tracks the following metrics:
- *
- *   cpu_util_{cfs,rt,dl,irq}()
- *   cpu_bw_dl()
- *
- * Where the cfs,rt and dl util numbers are tracked with the same metric and
- * synchronized windows and are thus directly comparable.
- *
- * The cfs,rt,dl utilization are the running times measured with rq->clock_task
- * which excludes things like IRQ and steal-time. These latter are then accrued
- * in the irq utilization.
- *
- * The DL bandwidth number otoh is not a measured metric but a value computed
- * based on the task model parameters and gives the minimal utilization
- * required to meet deadlines.
- */
-unsigned long effective_cpu_util(int cpu, unsigned long util_cfs,
-				 enum cpu_util_type type,
-				 struct task_struct *p)
-{
-	unsigned long dl_util, util, irq, max;
-	struct rq *rq = cpu_rq(cpu);
-
-	max = arch_scale_cpu_capacity(cpu);
-
-	if (!uclamp_is_used() &&
-	    type == FREQUENCY_UTIL && rt_rq_is_runnable(&rq->rt)) {
-		return max;
-	}
-
-	/*
-	 * Early check to see if IRQ/steal time saturates the CPU, can be
-	 * because of inaccuracies in how we track these -- see
-	 * update_irq_load_avg().
-	 */
-	irq = cpu_util_irq(rq);
-	if (unlikely(irq >= max))
-		return max;
-
-	/*
-	 * Because the time spend on RT/DL tasks is visible as 'lost' time to
-	 * CFS tasks and we use the same metric to track the effective
-	 * utilization (PELT windows are synchronized) we can directly add them
-	 * to obtain the CPU's actual utilization.
-	 *
-	 * CFS and RT utilization can be boosted or capped, depending on
-	 * utilization clamp constraints requested by currently RUNNABLE
-	 * tasks.
-	 * When there are no CFS RUNNABLE tasks, clamps are released and
-	 * frequency will be gracefully reduced with the utilization decay.
-	 */
-	util = util_cfs + cpu_util_rt(rq);
-	if (type == FREQUENCY_UTIL)
-		util = uclamp_rq_util_with(rq, util, p);
-
-	dl_util = cpu_util_dl(rq);
-
-	/*
-	 * For frequency selection we do not make cpu_util_dl() a permanent part
-	 * of this sum because we want to use cpu_bw_dl() later on, but we need
-	 * to check if the CFS+RT+DL sum is saturated (ie. no idle time) such
-	 * that we select f_max when there is no idle time.
-	 *
-	 * NOTE: numerical errors or stop class might cause us to not quite hit
-	 * saturation when we should -- something for later.
-	 */
-	if (util + dl_util >= max)
-		return max;
-
-	/*
-	 * OTOH, for energy computation we need the estimated running time, so
-	 * include util_dl and ignore dl_bw.
-	 */
-	if (type == ENERGY_UTIL)
-		util += dl_util;
-
-	/*
-	 * There is still idle time; further improve the number by using the
-	 * irq metric. Because IRQ/steal time is hidden from the task clock we
-	 * need to scale the task numbers:
-	 *
-	 *              max - irq
-	 *   U' = irq + --------- * U
-	 *                 max
-	 */
-	util = scale_irq_capacity(util, irq, max);
-	util += irq;
-
-	/*
-	 * Bandwidth required by DEADLINE must always be granted while, for
-	 * FAIR and RT, we use blocked utilization of IDLE CPUs as a mechanism
-	 * to gracefully reduce the frequency when no tasks show up for longer
-	 * periods of time.
-	 *
-	 * Ideally we would like to set bw_dl as min/guaranteed freq and util +
-	 * bw_dl as requested freq. However, cpufreq is not yet ready for such
-	 * an interface. So, we only do the latter for now.
-	 */
-	if (type == FREQUENCY_UTIL)
-		util += cpu_bw_dl(rq);
-
-	return min(max, util);
-}
-
-unsigned long sched_cpu_util(int cpu)
-{
-	return effective_cpu_util(cpu, cpu_util_cfs(cpu), ENERGY_UTIL, NULL);
-}
-#endif /* CONFIG_SMP */
 
 /**
  * find_process_by_pid - find a process with a matching PID value.
@@ -9646,11 +9433,6 @@ int sched_cpu_activate(unsigned int cpu)
 	balance_push_set(cpu, false);
 
 #ifdef CONFIG_SCHED_SMT
-	/*
-	 * When going up, increment the number of cores with SMT present.
-	 */
-	if (cpumask_weight(cpu_smt_mask(cpu)) == 2)
-		static_branch_inc_cpuslocked(&sched_smt_present);
 #endif
 	set_cpu_active(cpu, true);
 
@@ -9685,12 +9467,6 @@ int sched_cpu_deactivate(unsigned int cpu)
 	struct rq_flags rf;
 	int ret;
 
-	/*
-	 * Remove CPU from nohz.idle_cpus_mask to prevent participating in
-	 * load balancing when not active
-	 */
-	nohz_balance_exit_idle(rq);
-
 	set_cpu_active(cpu, false);
 
 	/*
@@ -9720,16 +9496,6 @@ int sched_cpu_deactivate(unsigned int cpu)
 	}
 	rq_unlock_irqrestore(rq, &rf);
 
-#ifdef CONFIG_SCHED_SMT
-	/*
-	 * When going down, decrement the number of cores with SMT present.
-	 */
-	if (cpumask_weight(cpu_smt_mask(cpu)) == 2)
-		static_branch_dec_cpuslocked(&sched_smt_present);
-
-	sched_core_cpu_deactivate(cpu);
-#endif
-
 	if (!sched_smp_initialized)
 		return 0;
 
@@ -9750,7 +9516,6 @@ static void sched_rq_cpu_starting(unsigned int cpu)
 	struct rq *rq = cpu_rq(cpu);
 
 	rq->calc_load_update = calc_load_update;
-	update_max_interval();
 }
 
 int sched_cpu_starting(unsigned int cpu)
@@ -9832,7 +9597,6 @@ int sched_cpu_dying(unsigned int cpu)
 	rq_unlock_irqrestore(rq, &rf);
 
 	calc_load_migrate(rq);
-	update_max_interval();
 	hrtick_clear(rq);
 	sched_core_cpu_dying(cpu);
 	return 0;
@@ -9856,7 +9620,6 @@ void __init sched_init_smp(void)
 	if (set_cpus_allowed_ptr(current, housekeeping_cpumask(HK_TYPE_DOMAIN)) < 0)
 		BUG();
 	current->flags &= ~PF_NO_SETAFFINITY;
-	sched_init_granularity();
 
 	init_sched_rt_class();
 	init_sched_dl_class();
@@ -9874,7 +9637,6 @@ early_initcall(migration_init);
 #else
 void __init sched_init_smp(void)
 {
-	sched_init_granularity();
 }
 #endif /* CONFIG_SMP */
 
@@ -9912,25 +9674,11 @@ void __init sched_init(void)
 
 	wait_bit_init();
 
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	ptr += 2 * nr_cpu_ids * sizeof(void **);
-#endif
 #ifdef CONFIG_RT_GROUP_SCHED
 	ptr += 2 * nr_cpu_ids * sizeof(void **);
 #endif
 	if (ptr) {
 		ptr = (unsigned long)kzalloc(ptr, GFP_NOWAIT);
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-		root_task_group.se = (struct sched_entity **)ptr;
-		ptr += nr_cpu_ids * sizeof(void **);
-
-		root_task_group.cfs_rq = (struct cfs_rq **)ptr;
-		ptr += nr_cpu_ids * sizeof(void **);
-
-		root_task_group.shares = ROOT_TASK_GROUP_LOAD;
-		init_cfs_bandwidth(&root_task_group.cfs_bandwidth, NULL);
-#endif /* CONFIG_FAIR_GROUP_SCHED */
 #ifdef CONFIG_RT_GROUP_SCHED
 		root_task_group.rt_se = (struct sched_rt_entity **)ptr;
 		ptr += nr_cpu_ids * sizeof(void **);
@@ -9969,34 +9717,8 @@ void __init sched_init(void)
 		rq->nr_running = 0;
 		rq->calc_load_active = 0;
 		rq->calc_load_update = jiffies + LOAD_FREQ;
-		init_cfs_rq(&rq->cfs);
 		init_rt_rq(&rq->rt);
 		init_dl_rq(&rq->dl);
-#ifdef CONFIG_FAIR_GROUP_SCHED
-		INIT_LIST_HEAD(&rq->leaf_cfs_rq_list);
-		rq->tmp_alone_branch = &rq->leaf_cfs_rq_list;
-		/*
-		 * How much CPU bandwidth does root_task_group get?
-		 *
-		 * In case of task-groups formed thr' the cgroup filesystem, it
-		 * gets 100% of the CPU resources in the system. This overall
-		 * system CPU resource is divided among the tasks of
-		 * root_task_group and its child task-groups in a fair manner,
-		 * based on each entity's (task or task-group's) weight
-		 * (se->load.weight).
-		 *
-		 * In other words, if root_task_group has 10 tasks of weight
-		 * 1024) and two child groups A0 and A1 (of weight 1024 each),
-		 * then A0's share of the CPU resource is:
-		 *
-		 *	A0's bandwidth = 1024 / (10*1024 + 1024 + 1024) = 8.33%
-		 *
-		 * We achieve this by letting root_task_group's tasks sit
-		 * directly in rq->cfs (i.e root_task_group->se[] = NULL).
-		 */
-		init_tg_cfs_entry(&root_task_group, &rq->cfs, NULL, i, NULL);
-#endif /* CONFIG_FAIR_GROUP_SCHED */
-
 		rq->rt.rt_runtime = def_rt_bandwidth.rt_runtime;
 #ifdef CONFIG_RT_GROUP_SCHED
 		init_tg_rt_entry(&root_task_group, &rq->rt, NULL, i, NULL);
@@ -10012,12 +9734,10 @@ void __init sched_init(void)
 		rq->cpu = i;
 		rq->online = 0;
 		rq->idle_stamp = 0;
-		rq->avg_idle = 2*sysctl_sched_migration_cost;
+		rq->avg_idle = 0;
 		rq->wake_stamp = jiffies;
 		rq->wake_avg_idle = rq->avg_idle;
-		rq->max_idle_balance_cost = sysctl_sched_migration_cost;
-
-		INIT_LIST_HEAD(&rq->cfs_tasks);
+		rq->max_idle_balance_cost = 0;
 
 		rq_attach_root(rq, &def_root_domain);
 #ifdef CONFIG_NO_HZ_COMMON
@@ -10077,7 +9797,6 @@ void __init sched_init(void)
 	idle_thread_set_boot_cpu();
 	balance_push_set(smp_processor_id(), false);
 #endif
-	init_sched_fair_class();
 
 	psi_init();
 
@@ -10349,7 +10068,6 @@ static inline void alloc_uclamp_sched_group(struct task_group *tg,
 
 static void sched_free_group(struct task_group *tg)
 {
-	free_fair_sched_group(tg);
 	free_rt_sched_group(tg);
 	autogroup_free(tg);
 	kmem_cache_free(task_group_cache, tg);
@@ -10362,7 +10080,6 @@ static void sched_free_group_rcu(struct rcu_head *rcu)
 
 static void sched_unregister_group(struct task_group *tg)
 {
-	unregister_fair_sched_group(tg);
 	unregister_rt_sched_group(tg);
 	/*
 	 * We have to wait for yet another RCU grace period to expire, as
@@ -10379,10 +10096,7 @@ struct task_group *sched_create_group(struct task_group *parent)
 	tg = kmem_cache_alloc(task_group_cache, GFP_KERNEL | __GFP_ZERO);
 	if (!tg)
 		return ERR_PTR(-ENOMEM);
-
-	if (!alloc_fair_sched_group(tg, parent))
-		goto err;
-
+	
 	if (!alloc_rt_sched_group(tg, parent))
 		goto err;
 
@@ -10409,8 +10123,6 @@ void sched_online_group(struct task_group *tg, struct task_group *parent)
 	INIT_LIST_HEAD(&tg->children);
 	list_add_rcu(&tg->siblings, &parent->children);
 	spin_unlock_irqrestore(&task_group_lock, flags);
-
-	online_fair_sched_group(tg);
 }
 
 /* rcu callback to free various structures associated with a task group */
@@ -10468,13 +10180,7 @@ static struct task_group *sched_get_task_group(struct task_struct *tsk)
 static void sched_change_group(struct task_struct *tsk, struct task_group *group)
 {
 	tsk->sched_task_group = group;
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	if (tsk->sched_class->task_change_group)
-		tsk->sched_class->task_change_group(tsk);
-	else
-#endif
-		set_task_rq(tsk, task_cpu(tsk));
+	set_task_rq(tsk, task_cpu(tsk));
 }
 
 /*
@@ -10790,373 +10496,6 @@ static int cpu_uclamp_max_show(struct seq_file *sf, void *v)
 }
 #endif /* CONFIG_UCLAMP_TASK_GROUP */
 
-#ifdef CONFIG_FAIR_GROUP_SCHED
-static int cpu_shares_write_u64(struct cgroup_subsys_state *css,
-				struct cftype *cftype, u64 shareval)
-{
-	if (shareval > scale_load_down(ULONG_MAX))
-		shareval = MAX_SHARES;
-	return sched_group_set_shares(css_tg(css), scale_load(shareval));
-}
-
-static u64 cpu_shares_read_u64(struct cgroup_subsys_state *css,
-			       struct cftype *cft)
-{
-	struct task_group *tg = css_tg(css);
-
-	return (u64) scale_load_down(tg->shares);
-}
-
-#ifdef CONFIG_CFS_BANDWIDTH
-static DEFINE_MUTEX(cfs_constraints_mutex);
-
-const u64 max_cfs_quota_period = 1 * NSEC_PER_SEC; /* 1s */
-static const u64 min_cfs_quota_period = 1 * NSEC_PER_MSEC; /* 1ms */
-/* More than 203 days if BW_SHIFT equals 20. */
-static const u64 max_cfs_runtime = MAX_BW * NSEC_PER_USEC;
-
-static int __cfs_schedulable(struct task_group *tg, u64 period, u64 runtime);
-
-static int tg_set_cfs_bandwidth(struct task_group *tg, u64 period, u64 quota,
-				u64 burst)
-{
-	int i, ret = 0, runtime_enabled, runtime_was_enabled;
-	struct cfs_bandwidth *cfs_b = &tg->cfs_bandwidth;
-
-	if (tg == &root_task_group)
-		return -EINVAL;
-
-	/*
-	 * Ensure we have at some amount of bandwidth every period.  This is
-	 * to prevent reaching a state of large arrears when throttled via
-	 * entity_tick() resulting in prolonged exit starvation.
-	 */
-	if (quota < min_cfs_quota_period || period < min_cfs_quota_period)
-		return -EINVAL;
-
-	/*
-	 * Likewise, bound things on the other side by preventing insane quota
-	 * periods.  This also allows us to normalize in computing quota
-	 * feasibility.
-	 */
-	if (period > max_cfs_quota_period)
-		return -EINVAL;
-
-	/*
-	 * Bound quota to defend quota against overflow during bandwidth shift.
-	 */
-	if (quota != RUNTIME_INF && quota > max_cfs_runtime)
-		return -EINVAL;
-
-	if (quota != RUNTIME_INF && (burst > quota ||
-				     burst + quota > max_cfs_runtime))
-		return -EINVAL;
-
-	/*
-	 * Prevent race between setting of cfs_rq->runtime_enabled and
-	 * unthrottle_offline_cfs_rqs().
-	 */
-	cpus_read_lock();
-	mutex_lock(&cfs_constraints_mutex);
-	ret = __cfs_schedulable(tg, period, quota);
-	if (ret)
-		goto out_unlock;
-
-	runtime_enabled = quota != RUNTIME_INF;
-	runtime_was_enabled = cfs_b->quota != RUNTIME_INF;
-	/*
-	 * If we need to toggle cfs_bandwidth_used, off->on must occur
-	 * before making related changes, and on->off must occur afterwards
-	 */
-	if (runtime_enabled && !runtime_was_enabled)
-		cfs_bandwidth_usage_inc();
-	raw_spin_lock_irq(&cfs_b->lock);
-	cfs_b->period = ns_to_ktime(period);
-	cfs_b->quota = quota;
-	cfs_b->burst = burst;
-
-	__refill_cfs_bandwidth_runtime(cfs_b);
-
-	/* Restart the period timer (if active) to handle new period expiry: */
-	if (runtime_enabled)
-		start_cfs_bandwidth(cfs_b);
-
-	raw_spin_unlock_irq(&cfs_b->lock);
-
-	for_each_online_cpu(i) {
-		struct cfs_rq *cfs_rq = tg->cfs_rq[i];
-		struct rq *rq = cfs_rq->rq;
-		struct rq_flags rf;
-
-		rq_lock_irq(rq, &rf);
-		cfs_rq->runtime_enabled = runtime_enabled;
-		cfs_rq->runtime_remaining = 0;
-
-		if (cfs_rq->throttled)
-			unthrottle_cfs_rq(cfs_rq);
-		rq_unlock_irq(rq, &rf);
-	}
-	if (runtime_was_enabled && !runtime_enabled)
-		cfs_bandwidth_usage_dec();
-out_unlock:
-	mutex_unlock(&cfs_constraints_mutex);
-	cpus_read_unlock();
-
-	return ret;
-}
-
-static int tg_set_cfs_quota(struct task_group *tg, long cfs_quota_us)
-{
-	u64 quota, period, burst;
-
-	period = ktime_to_ns(tg->cfs_bandwidth.period);
-	burst = tg->cfs_bandwidth.burst;
-	if (cfs_quota_us < 0)
-		quota = RUNTIME_INF;
-	else if ((u64)cfs_quota_us <= U64_MAX / NSEC_PER_USEC)
-		quota = (u64)cfs_quota_us * NSEC_PER_USEC;
-	else
-		return -EINVAL;
-
-	return tg_set_cfs_bandwidth(tg, period, quota, burst);
-}
-
-static long tg_get_cfs_quota(struct task_group *tg)
-{
-	u64 quota_us;
-
-	if (tg->cfs_bandwidth.quota == RUNTIME_INF)
-		return -1;
-
-	quota_us = tg->cfs_bandwidth.quota;
-	do_div(quota_us, NSEC_PER_USEC);
-
-	return quota_us;
-}
-
-static int tg_set_cfs_period(struct task_group *tg, long cfs_period_us)
-{
-	u64 quota, period, burst;
-
-	if ((u64)cfs_period_us > U64_MAX / NSEC_PER_USEC)
-		return -EINVAL;
-
-	period = (u64)cfs_period_us * NSEC_PER_USEC;
-	quota = tg->cfs_bandwidth.quota;
-	burst = tg->cfs_bandwidth.burst;
-
-	return tg_set_cfs_bandwidth(tg, period, quota, burst);
-}
-
-static long tg_get_cfs_period(struct task_group *tg)
-{
-	u64 cfs_period_us;
-
-	cfs_period_us = ktime_to_ns(tg->cfs_bandwidth.period);
-	do_div(cfs_period_us, NSEC_PER_USEC);
-
-	return cfs_period_us;
-}
-
-static int tg_set_cfs_burst(struct task_group *tg, long cfs_burst_us)
-{
-	u64 quota, period, burst;
-
-	if ((u64)cfs_burst_us > U64_MAX / NSEC_PER_USEC)
-		return -EINVAL;
-
-	burst = (u64)cfs_burst_us * NSEC_PER_USEC;
-	period = ktime_to_ns(tg->cfs_bandwidth.period);
-	quota = tg->cfs_bandwidth.quota;
-
-	return tg_set_cfs_bandwidth(tg, period, quota, burst);
-}
-
-static long tg_get_cfs_burst(struct task_group *tg)
-{
-	u64 burst_us;
-
-	burst_us = tg->cfs_bandwidth.burst;
-	do_div(burst_us, NSEC_PER_USEC);
-
-	return burst_us;
-}
-
-static s64 cpu_cfs_quota_read_s64(struct cgroup_subsys_state *css,
-				  struct cftype *cft)
-{
-	return tg_get_cfs_quota(css_tg(css));
-}
-
-static int cpu_cfs_quota_write_s64(struct cgroup_subsys_state *css,
-				   struct cftype *cftype, s64 cfs_quota_us)
-{
-	return tg_set_cfs_quota(css_tg(css), cfs_quota_us);
-}
-
-static u64 cpu_cfs_period_read_u64(struct cgroup_subsys_state *css,
-				   struct cftype *cft)
-{
-	return tg_get_cfs_period(css_tg(css));
-}
-
-static int cpu_cfs_period_write_u64(struct cgroup_subsys_state *css,
-				    struct cftype *cftype, u64 cfs_period_us)
-{
-	return tg_set_cfs_period(css_tg(css), cfs_period_us);
-}
-
-static u64 cpu_cfs_burst_read_u64(struct cgroup_subsys_state *css,
-				  struct cftype *cft)
-{
-	return tg_get_cfs_burst(css_tg(css));
-}
-
-static int cpu_cfs_burst_write_u64(struct cgroup_subsys_state *css,
-				   struct cftype *cftype, u64 cfs_burst_us)
-{
-	return tg_set_cfs_burst(css_tg(css), cfs_burst_us);
-}
-
-struct cfs_schedulable_data {
-	struct task_group *tg;
-	u64 period, quota;
-};
-
-/*
- * normalize group quota/period to be quota/max_period
- * note: units are usecs
- */
-static u64 normalize_cfs_quota(struct task_group *tg,
-			       struct cfs_schedulable_data *d)
-{
-	u64 quota, period;
-
-	if (tg == d->tg) {
-		period = d->period;
-		quota = d->quota;
-	} else {
-		period = tg_get_cfs_period(tg);
-		quota = tg_get_cfs_quota(tg);
-	}
-
-	/* note: these should typically be equivalent */
-	if (quota == RUNTIME_INF || quota == -1)
-		return RUNTIME_INF;
-
-	return to_ratio(period, quota);
-}
-
-static int tg_cfs_schedulable_down(struct task_group *tg, void *data)
-{
-	struct cfs_schedulable_data *d = data;
-	struct cfs_bandwidth *cfs_b = &tg->cfs_bandwidth;
-	s64 quota = 0, parent_quota = -1;
-
-	if (!tg->parent) {
-		quota = RUNTIME_INF;
-	} else {
-		struct cfs_bandwidth *parent_b = &tg->parent->cfs_bandwidth;
-
-		quota = normalize_cfs_quota(tg, d);
-		parent_quota = parent_b->hierarchical_quota;
-
-		/*
-		 * Ensure max(child_quota) <= parent_quota.  On cgroup2,
-		 * always take the non-RUNTIME_INF min.  On cgroup1, only
-		 * inherit when no limit is set. In both cases this is used
-		 * by the scheduler to determine if a given CFS task has a
-		 * bandwidth constraint at some higher level.
-		 */
-		if (cgroup_subsys_on_dfl(cpu_cgrp_subsys)) {
-			if (quota == RUNTIME_INF)
-				quota = parent_quota;
-			else if (parent_quota != RUNTIME_INF)
-				quota = min(quota, parent_quota);
-		} else {
-			if (quota == RUNTIME_INF)
-				quota = parent_quota;
-			else if (parent_quota != RUNTIME_INF && quota > parent_quota)
-				return -EINVAL;
-		}
-	}
-	cfs_b->hierarchical_quota = quota;
-
-	return 0;
-}
-
-static int __cfs_schedulable(struct task_group *tg, u64 period, u64 quota)
-{
-	int ret;
-	struct cfs_schedulable_data data = {
-		.tg = tg,
-		.period = period,
-		.quota = quota,
-	};
-
-	if (quota != RUNTIME_INF) {
-		do_div(data.period, NSEC_PER_USEC);
-		do_div(data.quota, NSEC_PER_USEC);
-	}
-
-	rcu_read_lock();
-	ret = walk_tg_tree(tg_cfs_schedulable_down, tg_nop, &data);
-	rcu_read_unlock();
-
-	return ret;
-}
-
-static int cpu_cfs_stat_show(struct seq_file *sf, void *v)
-{
-	struct task_group *tg = css_tg(seq_css(sf));
-	struct cfs_bandwidth *cfs_b = &tg->cfs_bandwidth;
-
-	seq_printf(sf, "nr_periods %d\n", cfs_b->nr_periods);
-	seq_printf(sf, "nr_throttled %d\n", cfs_b->nr_throttled);
-	seq_printf(sf, "throttled_time %llu\n", cfs_b->throttled_time);
-
-	if (schedstat_enabled() && tg != &root_task_group) {
-		struct sched_statistics *stats;
-		u64 ws = 0;
-		int i;
-
-		for_each_possible_cpu(i) {
-			stats = __schedstats_from_se(tg->se[i]);
-			ws += schedstat_val(stats->wait_sum);
-		}
-
-		seq_printf(sf, "wait_sum %llu\n", ws);
-	}
-
-	seq_printf(sf, "nr_bursts %d\n", cfs_b->nr_burst);
-	seq_printf(sf, "burst_time %llu\n", cfs_b->burst_time);
-
-	return 0;
-}
-
-static u64 throttled_time_self(struct task_group *tg)
-{
-	int i;
-	u64 total = 0;
-
-	for_each_possible_cpu(i) {
-		total += READ_ONCE(tg->cfs_rq[i]->throttled_clock_self_time);
-	}
-
-	return total;
-}
-
-static int cpu_cfs_local_stat_show(struct seq_file *sf, void *v)
-{
-	struct task_group *tg = css_tg(seq_css(sf));
-
-	seq_printf(sf, "throttled_time %llu\n", throttled_time_self(tg));
-
-	return 0;
-}
-#endif /* CONFIG_CFS_BANDWIDTH */
-#endif /* CONFIG_FAIR_GROUP_SCHED */
-
 #ifdef CONFIG_RT_GROUP_SCHED
 static int cpu_rt_runtime_write(struct cgroup_subsys_state *css,
 				struct cftype *cft, s64 val)
@@ -11183,58 +10522,7 @@ static u64 cpu_rt_period_read_uint(struct cgroup_subsys_state *css,
 }
 #endif /* CONFIG_RT_GROUP_SCHED */
 
-#ifdef CONFIG_FAIR_GROUP_SCHED
-static s64 cpu_idle_read_s64(struct cgroup_subsys_state *css,
-			       struct cftype *cft)
-{
-	return css_tg(css)->idle;
-}
-
-static int cpu_idle_write_s64(struct cgroup_subsys_state *css,
-				struct cftype *cft, s64 idle)
-{
-	return sched_group_set_idle(css_tg(css), idle);
-}
-#endif
-
 static struct cftype cpu_legacy_files[] = {
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	{
-		.name = "shares",
-		.read_u64 = cpu_shares_read_u64,
-		.write_u64 = cpu_shares_write_u64,
-	},
-	{
-		.name = "idle",
-		.read_s64 = cpu_idle_read_s64,
-		.write_s64 = cpu_idle_write_s64,
-	},
-#endif
-#ifdef CONFIG_CFS_BANDWIDTH
-	{
-		.name = "cfs_quota_us",
-		.read_s64 = cpu_cfs_quota_read_s64,
-		.write_s64 = cpu_cfs_quota_write_s64,
-	},
-	{
-		.name = "cfs_period_us",
-		.read_u64 = cpu_cfs_period_read_u64,
-		.write_u64 = cpu_cfs_period_write_u64,
-	},
-	{
-		.name = "cfs_burst_us",
-		.read_u64 = cpu_cfs_burst_read_u64,
-		.write_u64 = cpu_cfs_burst_write_u64,
-	},
-	{
-		.name = "stat",
-		.seq_show = cpu_cfs_stat_show,
-	},
-	{
-		.name = "stat.local",
-		.seq_show = cpu_cfs_local_stat_show,
-	},
-#endif
 #ifdef CONFIG_RT_GROUP_SCHED
 	{
 		.name = "rt_runtime_us",
@@ -11263,113 +10551,6 @@ static struct cftype cpu_legacy_files[] = {
 #endif
 	{ }	/* Terminate */
 };
-
-static int cpu_extra_stat_show(struct seq_file *sf,
-			       struct cgroup_subsys_state *css)
-{
-#ifdef CONFIG_CFS_BANDWIDTH
-	{
-		struct task_group *tg = css_tg(css);
-		struct cfs_bandwidth *cfs_b = &tg->cfs_bandwidth;
-		u64 throttled_usec, burst_usec;
-
-		throttled_usec = cfs_b->throttled_time;
-		do_div(throttled_usec, NSEC_PER_USEC);
-		burst_usec = cfs_b->burst_time;
-		do_div(burst_usec, NSEC_PER_USEC);
-
-		seq_printf(sf, "nr_periods %d\n"
-			   "nr_throttled %d\n"
-			   "throttled_usec %llu\n"
-			   "nr_bursts %d\n"
-			   "burst_usec %llu\n",
-			   cfs_b->nr_periods, cfs_b->nr_throttled,
-			   throttled_usec, cfs_b->nr_burst, burst_usec);
-	}
-#endif
-	return 0;
-}
-
-static int cpu_local_stat_show(struct seq_file *sf,
-			       struct cgroup_subsys_state *css)
-{
-#ifdef CONFIG_CFS_BANDWIDTH
-	{
-		struct task_group *tg = css_tg(css);
-		u64 throttled_self_usec;
-
-		throttled_self_usec = throttled_time_self(tg);
-		do_div(throttled_self_usec, NSEC_PER_USEC);
-
-		seq_printf(sf, "throttled_usec %llu\n",
-			   throttled_self_usec);
-	}
-#endif
-	return 0;
-}
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-static u64 cpu_weight_read_u64(struct cgroup_subsys_state *css,
-			       struct cftype *cft)
-{
-	struct task_group *tg = css_tg(css);
-	u64 weight = scale_load_down(tg->shares);
-
-	return DIV_ROUND_CLOSEST_ULL(weight * CGROUP_WEIGHT_DFL, 1024);
-}
-
-static int cpu_weight_write_u64(struct cgroup_subsys_state *css,
-				struct cftype *cft, u64 weight)
-{
-	/*
-	 * cgroup weight knobs should use the common MIN, DFL and MAX
-	 * values which are 1, 100 and 10000 respectively.  While it loses
-	 * a bit of range on both ends, it maps pretty well onto the shares
-	 * value used by scheduler and the round-trip conversions preserve
-	 * the original value over the entire range.
-	 */
-	if (weight < CGROUP_WEIGHT_MIN || weight > CGROUP_WEIGHT_MAX)
-		return -ERANGE;
-
-	weight = DIV_ROUND_CLOSEST_ULL(weight * 1024, CGROUP_WEIGHT_DFL);
-
-	return sched_group_set_shares(css_tg(css), scale_load(weight));
-}
-
-static s64 cpu_weight_nice_read_s64(struct cgroup_subsys_state *css,
-				    struct cftype *cft)
-{
-	unsigned long weight = scale_load_down(css_tg(css)->shares);
-	int last_delta = INT_MAX;
-	int prio, delta;
-
-	/* find the closest nice value to the current weight */
-	for (prio = 0; prio < ARRAY_SIZE(sched_prio_to_weight); prio++) {
-		delta = abs(sched_prio_to_weight[prio] - weight);
-		if (delta >= last_delta)
-			break;
-		last_delta = delta;
-	}
-
-	return PRIO_TO_NICE(prio - 1 + MAX_RT_PRIO);
-}
-
-static int cpu_weight_nice_write_s64(struct cgroup_subsys_state *css,
-				     struct cftype *cft, s64 nice)
-{
-	unsigned long weight;
-	int idx;
-
-	if (nice < MIN_NICE || nice > MAX_NICE)
-		return -ERANGE;
-
-	idx = NICE_TO_PRIO(nice) - MAX_RT_PRIO;
-	idx = array_index_nospec(idx, 40);
-	weight = sched_prio_to_weight[idx];
-
-	return sched_group_set_shares(css_tg(css), scale_load(weight));
-}
-#endif
 
 static void __maybe_unused cpu_period_quota_print(struct seq_file *sf,
 						  long period, long quota)
@@ -11403,66 +10584,7 @@ static int __maybe_unused cpu_period_quota_parse(char *buf,
 	return 0;
 }
 
-#ifdef CONFIG_CFS_BANDWIDTH
-static int cpu_max_show(struct seq_file *sf, void *v)
-{
-	struct task_group *tg = css_tg(seq_css(sf));
-
-	cpu_period_quota_print(sf, tg_get_cfs_period(tg), tg_get_cfs_quota(tg));
-	return 0;
-}
-
-static ssize_t cpu_max_write(struct kernfs_open_file *of,
-			     char *buf, size_t nbytes, loff_t off)
-{
-	struct task_group *tg = css_tg(of_css(of));
-	u64 period = tg_get_cfs_period(tg);
-	u64 burst = tg_get_cfs_burst(tg);
-	u64 quota;
-	int ret;
-
-	ret = cpu_period_quota_parse(buf, &period, &quota);
-	if (!ret)
-		ret = tg_set_cfs_bandwidth(tg, period, quota, burst);
-	return ret ?: nbytes;
-}
-#endif
-
 static struct cftype cpu_files[] = {
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	{
-		.name = "weight",
-		.flags = CFTYPE_NOT_ON_ROOT,
-		.read_u64 = cpu_weight_read_u64,
-		.write_u64 = cpu_weight_write_u64,
-	},
-	{
-		.name = "weight.nice",
-		.flags = CFTYPE_NOT_ON_ROOT,
-		.read_s64 = cpu_weight_nice_read_s64,
-		.write_s64 = cpu_weight_nice_write_s64,
-	},
-	{
-		.name = "idle",
-		.flags = CFTYPE_NOT_ON_ROOT,
-		.read_s64 = cpu_idle_read_s64,
-		.write_s64 = cpu_idle_write_s64,
-	},
-#endif
-#ifdef CONFIG_CFS_BANDWIDTH
-	{
-		.name = "max",
-		.flags = CFTYPE_NOT_ON_ROOT,
-		.seq_show = cpu_max_show,
-		.write = cpu_max_write,
-	},
-	{
-		.name = "max.burst",
-		.flags = CFTYPE_NOT_ON_ROOT,
-		.read_u64 = cpu_cfs_burst_read_u64,
-		.write_u64 = cpu_cfs_burst_write_u64,
-	},
-#endif
 #ifdef CONFIG_UCLAMP_TASK_GROUP
 	{
 		.name = "uclamp.min",
@@ -11485,8 +10607,6 @@ struct cgroup_subsys cpu_cgrp_subsys = {
 	.css_online	= cpu_cgroup_css_online,
 	.css_released	= cpu_cgroup_css_released,
 	.css_free	= cpu_cgroup_css_free,
-	.css_extra_stat_show = cpu_extra_stat_show,
-	.css_local_stat_show = cpu_local_stat_show,
 #ifdef CONFIG_RT_GROUP_SCHED
 	.can_attach	= cpu_cgroup_can_attach,
 #endif

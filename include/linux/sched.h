@@ -46,7 +46,6 @@ struct blk_plug;
 struct bpf_local_storage;
 struct bpf_run_ctx;
 struct capture_control;
-struct cfs_rq;
 struct fs_struct;
 struct futex_pi_state;
 struct io_context;
@@ -564,17 +563,6 @@ struct sched_entity {
 	u64				slice;
 
 	u64				nr_migrations;
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	int				depth;
-	struct sched_entity		*parent;
-	/* rq on which this entity is (to be) queued: */
-	struct cfs_rq			*cfs_rq;
-	/* rq "owned" by this entity/group: */
-	struct cfs_rq			*my_q;
-	/* cached value of my_q->h_nr_running */
-	unsigned long			runnable_weight;
-#endif
 
 #ifdef CONFIG_SMP
 	/*

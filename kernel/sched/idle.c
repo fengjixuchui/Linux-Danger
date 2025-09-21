@@ -239,11 +239,6 @@ static void do_idle(void)
 	int cpu = smp_processor_id();
 
 	/*
-	 * Check if we need to update blocked load
-	 */
-	nohz_run_idle_balance(cpu);
-
-	/*
 	 * If the arch has a polling bit, we maintain an invariant:
 	 *
 	 * Our polling bit is clear if we're not scheduled (i.e. if rq->curr !=
@@ -412,7 +407,6 @@ static void put_prev_task_idle(struct rq *rq, struct task_struct *prev)
 
 static void set_next_task_idle(struct rq *rq, struct task_struct *next, bool first)
 {
-	update_idle_core(rq);
 	schedstat_inc(rq->sched_goidle);
 }
 

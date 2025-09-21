@@ -165,7 +165,7 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
 		tpid = task_pid_nr_ns(tracer, ns);
 
 	tgid = task_tgid_nr_ns(p, ns);
-	ngid = task_numa_group_id(p);
+	ngid = 0;
 	cred = get_task_cred(p);
 
 	task_lock(p);

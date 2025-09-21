@@ -1134,7 +1134,6 @@ void tick_nohz_idle_stop_tick(void)
 
 		if (!was_stopped && ts->tick_stopped) {
 			ts->idle_jiffies = ts->last_jiffies;
-			nohz_balance_enter_idle(cpu);
 		}
 	} else {
 		tick_nohz_retain_tick(ts);

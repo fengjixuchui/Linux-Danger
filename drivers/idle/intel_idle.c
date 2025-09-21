@@ -177,7 +177,7 @@ static __cpuidle int intel_idle_irq(struct cpuidle_device *dev,
 static __cpuidle int intel_idle_ibrs(struct cpuidle_device *dev,
 				     struct cpuidle_driver *drv, int index)
 {
-	bool smt_active = sched_smt_active();
+	bool smt_active = 0;
 	u64 spec_ctrl = spec_ctrl_current();
 	int ret;
 

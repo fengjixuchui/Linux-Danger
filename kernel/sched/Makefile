@@ -29,7 +29,6 @@ endif
 # build parallelizes well and finishes roughly at once:
 #
 obj-y += core.o
-obj-y += fair.o
 obj-y += easy.o
 obj-y += build_policy.o
 obj-y += build_utility.o

@@ -4834,8 +4834,6 @@ static vm_fault_t do_numa_page(struct vm_fault *vmf)
 	}
 
 out:
-	if (page_nid != NUMA_NO_NODE)
-		task_numa_fault(last_cpupid, page_nid, 1, flags);
 	return 0;
 out_map:
 	/*

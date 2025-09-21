@@ -1865,7 +1865,6 @@ static int bprm_execve(struct linux_binprm *bprm,
 	rseq_execve(current);
 	user_events_execve(current);
 	acct_update_integrals(current);
-	task_numa_free(current, false);
 	return retval;
 
 out:

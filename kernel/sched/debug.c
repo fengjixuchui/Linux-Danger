@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * kernel/sched/debug.c
- *
  * Print the CFS rbtree and other debugging details
- *
  * Copyright(C) 2007, Red Hat, Inc., Ingo Molnar
+ * Deleted CFS Bullshit
+ * Copyright(C) 2025, SuperHacker UEFI
  */
 
 /*
@@ -186,8 +186,7 @@ static ssize_t sched_scaling_write(struct file *filp, const char __user *ubuf,
 
 	if (scaling >= SCHED_TUNABLESCALING_END)
 		return -EINVAL;
-
-	sysctl_sched_tunable_scaling = scaling;
+	
 	if (sched_update_scaling())
 		return -EINVAL;
 
@@ -197,7 +196,6 @@ static ssize_t sched_scaling_write(struct file *filp, const char __user *ubuf,
 
 static int sched_scaling_show(struct seq_file *m, void *v)
 {
-	seq_printf(m, "%d\n", sysctl_sched_tunable_scaling);
 	return 0;
 }
 
@@ -347,29 +345,8 @@ static __init int sched_init_debug(void)
 	debugfs_create_file("preempt", 0644, debugfs_sched, NULL, &sched_dynamic_fops);
 #endif
 
-	debugfs_create_u32("base_slice_ns", 0644, debugfs_sched, &sysctl_sched_base_slice);
-
-	debugfs_create_u32("latency_warn_ms", 0644, debugfs_sched, &sysctl_resched_latency_warn_ms);
-	debugfs_create_u32("latency_warn_once", 0644, debugfs_sched, &sysctl_resched_latency_warn_once);
-
-#ifdef CONFIG_SMP
-	debugfs_create_file("tunable_scaling", 0644, debugfs_sched, NULL, &sched_scaling_fops);
-	debugfs_create_u32("migration_cost_ns", 0644, debugfs_sched, &sysctl_sched_migration_cost);
-	debugfs_create_u32("nr_migrate", 0644, debugfs_sched, &sysctl_sched_nr_migrate);
-
-	mutex_lock(&sched_domains_mutex);
-	update_sched_domain_debugfs();
-	mutex_unlock(&sched_domains_mutex);
-#endif
-
 #ifdef CONFIG_NUMA_BALANCING
 	numa = debugfs_create_dir("numa_balancing", debugfs_sched);
-
-	debugfs_create_u32("scan_delay_ms", 0644, numa, &sysctl_numa_balancing_scan_delay);
-	debugfs_create_u32("scan_period_min_ms", 0644, numa, &sysctl_numa_balancing_scan_period_min);
-	debugfs_create_u32("scan_period_max_ms", 0644, numa, &sysctl_numa_balancing_scan_period_max);
-	debugfs_create_u32("scan_size_mb", 0644, numa, &sysctl_numa_balancing_scan_size);
-	debugfs_create_u32("hot_threshold_ms", 0644, numa, &sysctl_numa_balancing_hot_threshold);
 #endif
 
 	debugfs_create_file("debug", 0444, debugfs_sched, NULL, &sched_debug_fops);
@@ -487,55 +464,6 @@ void dirty_sched_domain_sysctl(int cpu)
 
 #endif /* CONFIG_SMP */
 
-#ifdef CONFIG_FAIR_GROUP_SCHED
-static void print_cfs_group_stats(struct seq_file *m, int cpu, struct task_group *tg)
-{
-	struct sched_entity *se = tg->se[cpu];
-
-#define P(F)		SEQ_printf(m, "  .%-30s: %lld\n",	#F, (long long)F)
-#define P_SCHEDSTAT(F)	SEQ_printf(m, "  .%-30s: %lld\n",	\
-		#F, (long long)schedstat_val(stats->F))
-#define PN(F)		SEQ_printf(m, "  .%-30s: %lld.%06ld\n", #F, SPLIT_NS((long long)F))
-#define PN_SCHEDSTAT(F)	SEQ_printf(m, "  .%-30s: %lld.%06ld\n", \
-		#F, SPLIT_NS((long long)schedstat_val(stats->F)))
-
-	if (!se)
-		return;
-
-	PN(se->exec_start);
-	PN(se->vruntime);
-	PN(se->sum_exec_runtime);
-
-	if (schedstat_enabled()) {
-		struct sched_statistics *stats;
-		stats = __schedstats_from_se(se);
-
-		PN_SCHEDSTAT(wait_start);
-		PN_SCHEDSTAT(sleep_start);
-		PN_SCHEDSTAT(block_start);
-		PN_SCHEDSTAT(sleep_max);
-		PN_SCHEDSTAT(block_max);
-		PN_SCHEDSTAT(exec_max);
-		PN_SCHEDSTAT(slice_max);
-		PN_SCHEDSTAT(wait_max);
-		PN_SCHEDSTAT(wait_sum);
-		P_SCHEDSTAT(wait_count);
-	}
-
-	P(se->load.weight);
-#ifdef CONFIG_SMP
-	P(se->avg.load_avg);
-	P(se->avg.util_avg);
-	P(se->avg.runnable_avg);
-#endif
-
-#undef PN_SCHEDSTAT
-#undef PN
-#undef P_SCHEDSTAT
-#undef P
-}
-#endif
-
 #ifdef CONFIG_CGROUP_SCHED
 static DEFINE_SPINLOCK(sched_debug_lock);
 static char group_path[PATH_MAX];
@@ -579,25 +507,11 @@ print_task(struct seq_file *m, struct rq *rq, struct task_struct *p)
 	else
 		SEQ_printf(m, " %c", task_state_to_char(p));
 
-	SEQ_printf(m, "%15s %5d %9Ld.%06ld %c %9Ld.%06ld %9Ld.%06ld %9Ld.%06ld %9Ld %5d ",
-		p->comm, task_pid_nr(p),
-		SPLIT_NS(p->se.vruntime),
-		entity_eligible(cfs_rq_of(&p->se), &p->se) ? 'E' : 'N',
-		SPLIT_NS(p->se.deadline),
-		SPLIT_NS(p->se.slice),
-		SPLIT_NS(p->se.sum_exec_runtime),
-		(long long)(p->nvcsw + p->nivcsw),
-		p->prio);
-
 	SEQ_printf(m, "%9lld.%06ld %9lld.%06ld %9lld.%06ld %9lld.%06ld",
 		SPLIT_NS(schedstat_val_or_zero(p->stats.wait_sum)),
 		SPLIT_NS(p->se.sum_exec_runtime),
 		SPLIT_NS(schedstat_val_or_zero(p->stats.sum_sleep_runtime)),
 		SPLIT_NS(schedstat_val_or_zero(p->stats.sum_block_runtime)));
-
-#ifdef CONFIG_NUMA_BALANCING
-	SEQ_printf(m, " %d %d", task_node(p), task_numa_group_id(p));
-#endif
 #ifdef CONFIG_CGROUP_SCHED
 	SEQ_printf_task_group_path(m, task_group(p), " %s")
 #endif
@@ -624,86 +538,6 @@ static void print_rq(struct seq_file *m, struct rq *rq, int rq_cpu)
 		print_task(m, rq, p);
 	}
 	rcu_read_unlock();
-}
-
-void print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq)
-{
-	s64 left_vruntime = -1, min_vruntime, right_vruntime = -1, spread;
-	struct sched_entity *last, *first;
-	struct rq *rq = cpu_rq(cpu);
-	unsigned long flags;
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	SEQ_printf(m, "\n");
-	SEQ_printf_task_group_path(m, cfs_rq->tg, "cfs_rq[%d]:%s\n", cpu);
-#else
-	SEQ_printf(m, "\n");
-	SEQ_printf(m, "cfs_rq[%d]:\n", cpu);
-#endif
-	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", "exec_clock",
-			SPLIT_NS(cfs_rq->exec_clock));
-
-	raw_spin_rq_lock_irqsave(rq, flags);
-	first = __pick_first_entity(cfs_rq);
-	if (first)
-		left_vruntime = first->vruntime;
-	last = __pick_last_entity(cfs_rq);
-	if (last)
-		right_vruntime = last->vruntime;
-	min_vruntime = cfs_rq->min_vruntime;
-	raw_spin_rq_unlock_irqrestore(rq, flags);
-
-	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", "left_vruntime",
-			SPLIT_NS(left_vruntime));
-	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", "min_vruntime",
-			SPLIT_NS(min_vruntime));
-	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", "avg_vruntime",
-			SPLIT_NS(avg_vruntime(cfs_rq)));
-	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", "right_vruntime",
-			SPLIT_NS(right_vruntime));
-	spread = right_vruntime - left_vruntime;
-	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", "spread", SPLIT_NS(spread));
-	SEQ_printf(m, "  .%-30s: %d\n", "nr_spread_over",
-			cfs_rq->nr_spread_over);
-	SEQ_printf(m, "  .%-30s: %d\n", "nr_running", cfs_rq->nr_running);
-	SEQ_printf(m, "  .%-30s: %d\n", "h_nr_running", cfs_rq->h_nr_running);
-	SEQ_printf(m, "  .%-30s: %d\n", "idle_nr_running",
-			cfs_rq->idle_nr_running);
-	SEQ_printf(m, "  .%-30s: %d\n", "idle_h_nr_running",
-			cfs_rq->idle_h_nr_running);
-	SEQ_printf(m, "  .%-30s: %ld\n", "load", cfs_rq->load.weight);
-#ifdef CONFIG_SMP
-	SEQ_printf(m, "  .%-30s: %lu\n", "load_avg",
-			cfs_rq->avg.load_avg);
-	SEQ_printf(m, "  .%-30s: %lu\n", "runnable_avg",
-			cfs_rq->avg.runnable_avg);
-	SEQ_printf(m, "  .%-30s: %lu\n", "util_avg",
-			cfs_rq->avg.util_avg);
-	SEQ_printf(m, "  .%-30s: %u\n", "util_est_enqueued",
-			cfs_rq->avg.util_est.enqueued);
-	SEQ_printf(m, "  .%-30s: %ld\n", "removed.load_avg",
-			cfs_rq->removed.load_avg);
-	SEQ_printf(m, "  .%-30s: %ld\n", "removed.util_avg",
-			cfs_rq->removed.util_avg);
-	SEQ_printf(m, "  .%-30s: %ld\n", "removed.runnable_avg",
-			cfs_rq->removed.runnable_avg);
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	SEQ_printf(m, "  .%-30s: %lu\n", "tg_load_avg_contrib",
-			cfs_rq->tg_load_avg_contrib);
-	SEQ_printf(m, "  .%-30s: %ld\n", "tg_load_avg",
-			atomic_long_read(&cfs_rq->tg->load_avg));
-#endif
-#endif
-#ifdef CONFIG_CFS_BANDWIDTH
-	SEQ_printf(m, "  .%-30s: %d\n", "throttled",
-			cfs_rq->throttled);
-	SEQ_printf(m, "  .%-30s: %d\n", "throttle_count",
-			cfs_rq->throttle_count);
-#endif
-
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	print_cfs_group_stats(m, cpu, cfs_rq->tg);
-#endif
 }
 
 void print_rt_rq(struct seq_file *m, int cpu, struct rt_rq *rt_rq)
@@ -811,20 +645,12 @@ do {									\
 		P(ttwu_local);
 	}
 #undef P
-
-	print_cfs_stats(m, cpu);
 	print_rt_stats(m, cpu);
 	print_dl_stats(m, cpu);
 
 	print_rq(m, rq, cpu);
 	SEQ_printf(m, "\n");
 }
-
-static const char *sched_tunable_scaling_names[] = {
-	"none",
-	"logarithmic",
-	"linear"
-};
 
 static void sched_debug_header(struct seq_file *m)
 {
@@ -863,17 +689,9 @@ static void sched_debug_header(struct seq_file *m)
 	SEQ_printf(m, "  .%-40s: %Ld\n", #x, (long long)(x))
 #define PN(x) \
 	SEQ_printf(m, "  .%-40s: %Ld.%06ld\n", #x, SPLIT_NS(x))
-	PN(sysctl_sched_base_slice);
-	P(sysctl_sched_child_runs_first);
 	P(sysctl_sched_features);
 #undef PN
 #undef P
-
-	SEQ_printf(m, "  .%-40s: %d (%s)\n",
-		"sysctl_sched_tunable_scaling",
-		sysctl_sched_tunable_scaling,
-		sched_tunable_scaling_names[sysctl_sched_tunable_scaling]);
-	SEQ_printf(m, "\n");
 }
 
 static int sched_debug_show(struct seq_file *m, void *v)
@@ -980,9 +798,6 @@ static void sched_show_numa(struct task_struct *p, struct seq_file *m)
 	P(numa_pages_migrated);
 	P(numa_preferred_nid);
 	P(total_numa_faults);
-	SEQ_printf(m, "current_node=%d, numa_group_id=%d\n",
-			task_node(p), task_numa_group_id(p));
-	show_numa_stats(p, m);
 #endif
 }
 

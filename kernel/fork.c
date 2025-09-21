@@ -972,7 +972,6 @@ void __put_task_struct(struct task_struct *tsk)
 
 	io_uring_free(tsk);
 	cgroup_free(tsk);
-	task_numa_free(tsk, true);
 	security_task_free(tsk);
 	exit_creds(tsk);
 	delayacct_tsk_free(tsk);

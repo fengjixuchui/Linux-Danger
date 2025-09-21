@@ -392,13 +392,6 @@ static bool build_perf_domains(const struct cpumask *cpu_map)
 		goto free;
 	}
 
-	/* EAS definitely does *not* handle SMT */
-	if (sched_smt_active()) {
-		pr_warn("rd %*pbl: Disabling EAS, SMT is not supported\n",
-			cpumask_pr_args(cpu_map));
-		goto free;
-	}
-
 	if (!arch_scale_freq_invariant()) {
 		if (sched_debug()) {
 			pr_warn("rd %*pbl: Disabling EAS: frequency-invariant load tracking not yet supported",
@@ -1309,8 +1302,6 @@ next:
 
 	if (cpu != group_balance_cpu(sg))
 		return;
-
-	update_group_capacity(sd, cpu);
 }
 
 /*

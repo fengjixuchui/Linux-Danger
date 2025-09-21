@@ -153,16 +153,6 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	return cpufreq_driver_resolve_freq(policy, freq);
 }
 
-static void sugov_get_util(struct sugov_cpu *sg_cpu)
-{
-	unsigned long util = cpu_util_cfs_boost(sg_cpu->cpu);
-	struct rq *rq = cpu_rq(sg_cpu->cpu);
-
-	sg_cpu->bw_dl = cpu_bw_dl(rq);
-	sg_cpu->util = effective_cpu_util(sg_cpu->cpu, util,
-					  FREQUENCY_UTIL, NULL);
-}
-
 /**
  * sugov_iowait_reset() - Reset the IO boost status of a CPU.
  * @sg_cpu: the sugov data for the CPU to boost
@@ -322,7 +312,6 @@ static inline bool sugov_update_single_common(struct sugov_cpu *sg_cpu,
 	if (!sugov_should_update_freq(sg_cpu->sg_policy, time))
 		return false;
 
-	sugov_get_util(sg_cpu);
 	sugov_iowait_apply(sg_cpu, time, max_cap);
 
 	return true;
@@ -424,8 +413,6 @@ static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu, u64 time)
 
 	for_each_cpu(j, policy->cpus) {
 		struct sugov_cpu *j_sg_cpu = &per_cpu(sugov_cpu, j);
-
-		sugov_get_util(j_sg_cpu);
 		sugov_iowait_apply(j_sg_cpu, time, max_cap);
 
 		util = max(j_sg_cpu->util, util);
