@@ -2019,6 +2019,22 @@ void hrtimer_init_sleeper(struct hrtimer_sleeper *sl, clockid_t clock_id,
 }
 EXPORT_SYMBOL_GPL(hrtimer_init_sleeper);
 
+// __inline void deep_halt(void)
+// {
+// 	asm volatile(
+// 		"movq $0xffffff8000000000, %%rax\n" // listen linear_mapping
+// 		"movq $0x0, %%rcx\n"
+// 		"movq $0x0, %%rdx\n"
+// 		"monitor\n"
+// 		"movq $0x10, %%rax\n" // C2 state
+// 		"movq $1, %%rcx\n"  // wake on interrupt
+// 		"mwait\n"
+// 		:
+// 		:
+// 		: "rax", "rcx", "rdx", "memory"
+// 	);
+// }
+
 ktime_t hlt_sleep(ktime_t sleep_req)
 {
 	ktime_t start_time = ktime_get(), remaining_time = 233;
