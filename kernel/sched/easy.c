@@ -38,7 +38,10 @@ __inline void egg(void)
     pr_alert("easy_sched: 'Your math is too poor!'\n");
     pr_alert("easy_sched: But every time they said it, I had already deleted their math-heavy bullshit,\n");
     pr_alert("easy_sched: and the system still ran — faster, cleaner, simpler.\n");
-    pr_alert("!!! Happy %s !!!\n", unix_day[(__ktime_get_real_seconds()/86400)%7]);
+    if (__ktime_get_real_seconds())
+        pr_alert("!!! Happy %s !!!\n", unix_day[(__ktime_get_real_seconds()/86400)%7]);
+    else
+        pr_alert("!!! Happy ???Day, time unknown 233 !!!\n");
     shown = 1;
 }
 
