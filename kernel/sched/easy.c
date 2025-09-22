@@ -1,6 +1,6 @@
 #include <linux/sched/clock.h>
 #include <linux/sched/cputime.h>
-#include <asm/tsc.h>
+#include <linux/timekeeper_internal.h>
 #include <linux/sched/isolation.h>
 #include <linux/sched/nohz.h>
 #include "sched.h"
@@ -39,8 +39,8 @@ static __inline void egg(void)
     pr_alert("easy_sched: 'Your math is too poor!'\n");
     pr_alert("easy_sched: But every time they said it, I had already deleted their math-heavy bullshit,\n");
     pr_alert("easy_sched: and the system still ran — faster, cleaner, simpler.\n");
-    if (__ktime_get_real_seconds())
-        pr_alert("!!! Happy %s !!!\n", unix_days[(__ktime_get_real_seconds()/86400)%7]);
+    if (global_timekeeper.xtime_sec)
+        pr_alert("!!! Happy %s !!!\n", unix_days[(global_timekeeper.xtime_sec/86400)%7]);
     else
         pr_alert("!!! Happy ???Day, time unknown 233 !!!\n");
     shown = 1;
@@ -48,10 +48,12 @@ static __inline void egg(void)
 static __inline void egg2(struct task_struct *p)
 {
     static uint64_t last_yield = 0;
-    uint64_t now_sec = __ktime_get_real_seconds();
-    if (now_sec-last_yield<30) return;
-    pr_alert("\033[1;31mWarning from Professors with PID=%lld: %s\033[0m\n", p->pid, prof_words[get_cycles()%(sizeof(prof_words)/sizeof(char *))]);
-    last_yield = now_sec;
+    if (global_timekeeper.ktime_sec-last_yield<30) return;
+    if (p->utime%255 > 233)
+    {
+        pr_alert("\033[1;31mWarning from Professors with PID=%lld: %s\033[0m\n", p->pid, prof_words[get_cycles()%(sizeof(prof_words)/sizeof(char *))]);
+        last_yield = global_timekeeper.ktime_sec;
+    }
 }
 
 void easy_sched_init(easy_sched_struct_def *easy_context)
