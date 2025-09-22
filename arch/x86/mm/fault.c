@@ -1411,7 +1411,7 @@ lock_mmap:
 retry:
 	vma = lock_mm_and_find_vma(mm, address, regs);
 	if (unlikely(!vma)) {
-		pr_alert("%s %s %d, lock_mm_and_find_vma failed !!!\n", __FILE__, __func__, __LINE__);
+		//pr_alert("%s %s %d, lock_mm_and_find_vma failed !!!\n", __FILE__, __func__, __LINE__);
 		bad_area_nosemaphore(regs, error_code, address);
 		return;
 	}

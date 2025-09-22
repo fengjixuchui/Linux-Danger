@@ -1,6 +1,6 @@
 #include <linux/sched/clock.h>
-#include <linux/sched/cond_resched.h>
 #include <linux/sched/cputime.h>
+#include <asm/tsc.h>
 #include <linux/sched/isolation.h>
 #include <linux/sched/nohz.h>
 #include "sched.h"
@@ -29,20 +29,29 @@ typedef struct {
 
 easy_sched_struct_def easy_cpu_contexts[128] = {0};
 
-__inline void egg(void)
+static const char *unix_days[] = {"Thursday", "Friday", "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"};
+static const char *prof_words[] = {"You can't just delete that!", "Your math is too poor!", "Without the formula, it's meaningless!", "Go back and study linear algebra!", "This is not rigorous.", "We need publish papers!", "Intuition won't work here!", "This is not scientific research!", "You are running blind code!"};
+static __inline void egg(void)
 {
     static uint8_t shown = 0;
     if (shown) return;
-    const char *unix_day[] = {"Thursday", "Friday", "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"};
     pr_alert("easy_sched: From Beijing to Hiroshima, Professors kept saying the same thing:\n");
     pr_alert("easy_sched: 'Your math is too poor!'\n");
     pr_alert("easy_sched: But every time they said it, I had already deleted their math-heavy bullshit,\n");
     pr_alert("easy_sched: and the system still ran — faster, cleaner, simpler.\n");
     if (__ktime_get_real_seconds())
-        pr_alert("!!! Happy %s !!!\n", unix_day[(__ktime_get_real_seconds()/86400)%7]);
+        pr_alert("!!! Happy %s !!!\n", unix_days[(__ktime_get_real_seconds()/86400)%7]);
     else
         pr_alert("!!! Happy ???Day, time unknown 233 !!!\n");
     shown = 1;
+}
+static __inline void egg2(struct task_struct *p)
+{
+    static uint64_t last_yield = 0;
+    uint64_t now_sec = __ktime_get_real_seconds();
+    if (now_sec-last_yield<30) return;
+    pr_alert("\033[1;31mWarning from Professors with PID=%lld: %s\033[0m\n", p->pid, prof_words[get_cycles()%(sizeof(prof_words)/sizeof(char *))]);
+    last_yield = now_sec;
 }
 
 void easy_sched_init(easy_sched_struct_def *easy_context)
@@ -81,7 +90,7 @@ static void dequeue_task_easy(struct rq *rq, struct task_struct *p, int flags)
     pr_alert("!!! %s 0x%llx failed !!!\n", __func__, p);
 }
 
-static uint8_t hlt_sleep_eligible(struct task_struct *p)
+static __inline uint8_t hlt_sleep_eligible(struct task_struct *p)
 {
 	if ((p->__state == TASK_HLT_SLEEP) && ((p->nivcsw & 0xFF) != 0xFF))
 	{
@@ -118,7 +127,7 @@ static void yield_task_easy(struct rq *rq)
     easy_context->index++;
 }
 
-static void put_prev_task_easy(struct rq *rq, struct task_struct *p) { }
+static void put_prev_task_easy(struct rq *rq, struct task_struct *p) { egg2(p); }
 static void set_next_task_easy(struct rq *rq, struct task_struct *p, bool first) { }
 static void check_preempt_curr_easy(struct rq *rq, struct task_struct *p, int flags) { }
 static void task_tick_easy(struct rq *rq, struct task_struct *p, int queued) { }
