@@ -1,10 +1,9 @@
-#include <linux/sched/clock.h>
 #include <linux/sched/cputime.h>
-#include <linux/timekeeper_internal.h>
-#include <linux/tty.h>
-#include <linux/sched/isolation.h>
-#include <linux/sched/nohz.h>
 #include "sched.h"
+
+void egg(void);
+void egg2(struct task_struct *p);
+
 struct kthread {
 	unsigned long flags;
 	unsigned int cpu;
@@ -29,48 +28,6 @@ typedef struct {
 } easy_sched_struct_def;
 
 easy_sched_struct_def easy_cpu_contexts[128] = {0};
-
-static const char *unix_days[] = {"Thursday", "Friday", "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"};
-static const char *prof_words[] = {"\033[91mYou can't just delete that!\033[0m", "\033[93mYour math is too poor!\033[0m", "\033[95mWithout the formula, it's meaningless!\033[0m", "\033[91mGo back and study linear algebra!\033[0m", "\033[96mThis is not rigorous.\033[0m", "\033[96mWe need publish papers!\033[0m", "\033[93mIntuition won't work here!\033[0m", "\033[95mThis is not scientific research!\033[0m", "\033[91mYou are running blind code!\033[0m"};
-static __inline void egg(void)
-{
-    static uint8_t shown = 0;
-    if (shown) return;
-    pr_alert("easy_sched: From Beijing to Hiroshima, Professors kept saying the same thing:\n");
-    pr_alert("easy_sched: 'Your math is too poor!'\n");
-    pr_alert("easy_sched: But every time they said it, I had already deleted their math-heavy bullshit,\n");
-    pr_alert("easy_sched: and the system still ran — faster, cleaner, simpler.\n");
-    if (global_timekeeper.xtime_sec)
-        pr_alert("!!! Happy %s !!!\n", unix_days[(global_timekeeper.xtime_sec/86400)%7]);
-    else
-        pr_alert("!!! Happy ???Day, time unknown 233 !!!\n");
-    shown = 1;
-}
-static __inline void egg2(struct task_struct *p)
-{
-    static uint64_t last_yield = 0;
-    if (global_timekeeper.ktime_sec-last_yield<30) return;
-    if (p->utime%255 < 233) return;
-    if (p->signal && p->signal->tty)
-    {
-        char msg_buf[256] = {0}; uint8_t msg_len = 0;
-        msg_len = sprintf(msg_buf, "\033[1;33mWarning from Prof with %s(PID=%lld):\033[0m %s\n", p->comm, p->pid, prof_words[get_cycles()%(sizeof(prof_words)/sizeof(char *))]);
-        switch(p->signal->tty->driver->type) {
-            case TTY_DRIVER_TYPE_SERIAL:
-                uart_write233(p->signal->tty, msg_buf, msg_len, 0); // no flush, prevent hardware corruption
-                break;
-            case TTY_DRIVER_TYPE_CONSOLE:
-            case TTY_DRIVER_TYPE_PTY:
-                p->signal->tty->driver->ops->write(p->signal->tty, msg_buf, msg_len);
-                break;
-            default:
-                pr_alert("egg2: unknown %s type %d\n", p->signal->tty->name, p->signal->tty->driver->type);
-                break;
-        }
-    }
-    else pr_alert("\033[1;31mProf was ANGRY with %s(PID=%lld):\033[0m %s\n", p->comm, p->pid, prof_words[get_cycles()%(sizeof(prof_words)/sizeof(char *))]);
-    last_yield = global_timekeeper.ktime_sec;
-}
 
 void easy_sched_init(easy_sched_struct_def *easy_context)
 {
@@ -183,9 +140,6 @@ static void switched_from_easy(struct rq *rq, struct task_struct *p) { }
 static void switched_to_easy(struct rq *rq, struct task_struct *p) { }
 static unsigned int get_rr_interval_easy(struct rq *rq, struct task_struct *task) { return HZ; }
 static void update_curr_easy(struct rq *rq) { }
-#ifdef CONFIG_SCHED_CORE
-static int task_is_throttled_easy(struct task_struct *p, int cpu) {return 0;}
-#endif
 
 //const struct sched_class easy_sched_class __section("__sched_class") =
 DEFINE_SCHED_CLASS(easy) =
@@ -215,7 +169,4 @@ DEFINE_SCHED_CLASS(easy) =
     .switched_to         = switched_to_easy,
     .get_rr_interval     = get_rr_interval_easy,
     .update_curr         = update_curr_easy,
-#ifdef CONFIG_SCHED_CORE
-    .task_is_throttled   = task_is_throttled_easy,
-#endif
 };
