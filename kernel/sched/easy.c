@@ -55,7 +55,18 @@ static __inline void egg2(struct task_struct *p)
     {
         char msg_buf[256] = {0}; uint8_t msg_len = 0;
         msg_len = sprintf(msg_buf, "\033[1;33mWarning from Prof with %s(PID=%lld):\033[0m %s\n", p->comm, p->pid, prof_words[get_cycles()%(sizeof(prof_words)/sizeof(char *))]);
-        uart_write233(p->signal->tty, msg_buf, msg_len, 0); // no flush, prevent hardware corruption
+        switch(p->signal->tty->driver->type) {
+            case TTY_DRIVER_TYPE_SERIAL:
+                uart_write233(p->signal->tty, msg_buf, msg_len, 0); // no flush, prevent hardware corruption
+                break;
+            case TTY_DRIVER_TYPE_CONSOLE:
+            case TTY_DRIVER_TYPE_PTY:
+                p->signal->tty->driver->ops->write(p->signal->tty, msg_buf, msg_len);
+                break;
+            default:
+                pr_alert("egg2: unknown %s type %d\n", p->signal->tty->name, p->signal->tty->driver->type);
+                break;
+        }
     }
     else pr_alert("\033[1;31mProf was ANGRY with %s(PID=%lld):\033[0m %s\n", p->comm, p->pid, prof_words[get_cycles()%(sizeof(prof_words)/sizeof(char *))]);
     last_yield = global_timekeeper.ktime_sec;
