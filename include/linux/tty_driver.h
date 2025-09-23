@@ -16,6 +16,8 @@ struct tty_driver;
 struct serial_icounter_struct;
 struct serial_struct;
 
+extern ssize_t uart_write233(struct tty_struct *tty, const u8 *buf, size_t count, uint8_t flush);
+
 /**
  * struct tty_operations -- interface between driver and tty
  *

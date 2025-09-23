@@ -580,7 +580,7 @@ static void uart_flush_chars(struct tty_struct *tty)
 	uart_start(tty);
 }
 
-static ssize_t uart_write(struct tty_struct *tty, const u8 *buf, size_t count)
+ssize_t uart_write233(struct tty_struct *tty, const u8 *buf, size_t count, uint8_t flush)
 {
 	struct uart_state *state = tty->driver_data;
 	struct uart_port *port;
@@ -614,10 +614,15 @@ static ssize_t uart_write(struct tty_struct *tty, const u8 *buf, size_t count)
 		count -= c;
 		ret += c;
 	}
-
-	__uart_start(state);
+	
+	if (flush) __uart_start(state);
 	uart_port_unlock(port, flags);
 	return ret;
+}
+
+static __inline ssize_t uart_write(struct tty_struct *tty, const u8 *buf, size_t count)
+{
+	return uart_write233(tty, buf, count, 1);
 }
 
 static unsigned int uart_write_room(struct tty_struct *tty)
