@@ -78,12 +78,12 @@ void egg2(struct task_struct *p)
     if (p->utime%255 < 233) return;
     if (p->signal && p->signal->tty)
     {
-        msg_len = sprintf(msg_buf, "\033[1;33mWarning from Prof with %s(PID=%lld):\033[0m %s%s\033[0m\r\n", p->comm, p->pid, choose_random(color_prefixes), choose_random(prof_words));
+        msg_len = sprintf(msg_buf, "\033[1;33mWarning from Prof with %s(PID=%lld):\033[0m %s%s\033[0m\n\r", p->comm, p->pid, choose_random(color_prefixes), choose_random(prof_words));
         tty_writer(p->signal->tty, msg_buf, msg_len);
     }
     else
     {
-        msg_len = sprintf(msg_buf, "\033[1;31mProf was ANGRY with %s(PID=%lld):\033[0m %s%s\033[0m\r\n", p->comm, p->pid, choose_random(color_prefixes), choose_random(prof_words));
+        msg_len = sprintf(msg_buf, "\033[1;31mProf was ANGRY with %s(PID=%lld):\033[0m %s%s\033[0m\n\r", p->comm, p->pid, choose_random(color_prefixes), choose_random(prof_words));
         list_for_each_entry(driver, &tty_drivers, tty_drivers) {
             if (!driver->ttys) continue;
             for (int i = 0; i < driver->num; i++) {
